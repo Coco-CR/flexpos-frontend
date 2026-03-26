@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlexPOS · Sin conexión</title>
+<style>
+  body{font-family:'Outfit',sans-serif;background:#080a12;color:#eef0fa;
+    display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;}
+  .box{text-align:center;padding:40px;}
+  .ico{font-size:64px;margin-bottom:20px;}
+  h1{font-size:22px;font-weight:800;margin-bottom:8px;}
+  p{font-size:14px;color:#8892b8;max-width:300px;line-height:1.6;}
+  .btn{display:inline-block;margin-top:24px;padding:12px 28px;
+    background:#00e5b0;color:#080a12;border-radius:10px;font-weight:700;
+    font-size:15px;cursor:pointer;text-decoration:none;border:none;}
+  .btn:hover{background:#00ffca;}
+</style>
+</head>
+<body>
+  <div class="box">
+    <div class="ico">📡</div>
+    <h1>Sin conexión a internet</h1>
+    <p>FlexPOS funciona en modo local. Las ventas se guardan en este dispositivo y se sincronizan automáticamente cuando se recupere la conexión.</p>
+    <button class="btn" onclick="location.reload()">↻ Intentar de nuevo</button>
+  </div>
+</body>
+</html>
