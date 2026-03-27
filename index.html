@@ -1209,7 +1209,15 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
           <div class="info-box">Estos datos aparecen en todas las facturas electrónicas como datos del Emisor.</div>
           <div class="field"><label>Nombre / Razón social *</label><input type="text" id="cfg-biz-nombre" placeholder="Mi Negocio S.A."></div>
           <div class="frow">
-            <div class="field"><label>Cédula jurídica *</label><input type="text" id="cfg-biz-ced" placeholder="3-101-000000"></div>
+            <div class="field"><label>Tipo de identificación del emisor</label>
+              <select id="cfg-biz-tipo-id">
+                <option value="01">01 — Cédula Física</option>
+                <option value="02">02 — Cédula Jurídica</option>
+                <option value="03">03 — DIMEX</option>
+                <option value="04">04 — NITE</option>
+              </select>
+            </div>
+            <div class="field"><label>Número de cédula / identificación *</label><input type="text" id="cfg-biz-ced" placeholder="Sin guiones, ej: 101230345"></div>
             <div class="field"><label>Código CIIU *</label><input type="text" id="cfg-biz-ciiu" placeholder="4711"></div>
           </div>
           <div class="frow">
@@ -1611,6 +1619,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
 ═══════════════════════════════════════════════════ */
 let SB_URL   = ls('sb_url')||'', SB_KEY=ls('sb_key')||'', SB_TABLE=ls('sb_table')||'inventario', SB_USER=ls('sb_user')||'admin';
 let BIZ = { nombre:ls('biz_nombre')||'Mi Negocio S.A.', cedula:ls('biz_ced')||'3-101-000000',
+  tipoId:ls('biz_tipo_id')||'01',
   ciiu:ls('biz_ciiu')||'4711', email:ls('biz_email')||'facturacion@negocio.cr',
   tel:ls('biz_tel')||'22001234', dir:ls('biz_dir')||'San José, Costa Rica' };
 let BACKEND_URL = ls('backend_url')||'', BACKEND_KEY = ls('backend_key')||'';
@@ -2244,7 +2253,7 @@ function buildXML(doc){
   <FechaEmision>${isoD}</FechaEmision>
   <Emisor>
     <Nombre>${xesc(doc.bizSnap.nombre)}</Nombre>
-    <Identificacion><Tipo>02</Tipo><Numero>${(doc.bizSnap.cedula||'').replace(/\D/g,'')}</Numero></Identificacion>
+    <Identificacion><Tipo>${doc.bizSnap.tipoId||'01'}</Tipo><Numero>${(doc.bizSnap.cedula||'').replace(/\D/g,'')}</Numero></Identificacion>
     <NombreComercial>${xesc(doc.bizSnap.nombre)}</NombreComercial>
     <Ubicacion><Provincia>1</Provincia><Canton>01</Canton><Distrito>01</Distrito><OtrasSenas>${xesc(doc.bizSnap.dir)}</OtrasSenas></Ubicacion>
     <Telefono><CodigoPais>506</CodigoPais><NumTelefono>${(doc.bizSnap.tel||'').replace(/\D/g,'')}</NumTelefono></Telefono>
@@ -3689,6 +3698,7 @@ function loadCfg(){
   document.getElementById('cfg-sb-user').value=SB_USER;
   document.getElementById('cfg-biz-nombre').value=BIZ.nombre;
   document.getElementById('cfg-biz-ced').value=BIZ.cedula;
+  document.getElementById('cfg-biz-tipo-id').value=BIZ.tipoId||'01';
   document.getElementById('cfg-biz-ciiu').value=BIZ.ciiu;
   document.getElementById('cfg-biz-email').value=BIZ.email;
   document.getElementById('cfg-biz-tel').value=BIZ.tel;
@@ -3719,7 +3729,8 @@ function saveSupabase(){
 }
 function saveBiz(){
   BIZ.nombre=document.getElementById('cfg-biz-nombre').value.trim();
-  BIZ.cedula=document.getElementById('cfg-biz-ced').value.trim();
+  BIZ.cedula=document.getElementById('cfg-biz-ced').value.trim().replace(/\D/g,'');
+  BIZ.tipoId=document.getElementById('cfg-biz-tipo-id').value;
   BIZ.ciiu=document.getElementById('cfg-biz-ciiu').value.trim();
   BIZ.email=document.getElementById('cfg-biz-email').value.trim();
   BIZ.tel=document.getElementById('cfg-biz-tel').value.trim();
