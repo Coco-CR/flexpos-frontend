@@ -2251,9 +2251,50 @@ function buildXML(doc){
   // Cédula sin cero inicial para el campo Numero (formato cédula física CR de 9 dígitos)
   const cedEmitNum=cedEmit.replace(/^0+/,'');
 
-  return`<?xml version="1.0" encoding="utf-8"?><${ns} xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower}" xsi:schemaLocation="https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower} https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower}.xsd"><Clave>${doc.clave}</Clave><ProveedorSistemas>${cedEmit}</ProveedorSistemas><CodigoActividadEmisor>${xesc(doc.bizSnap.ciiu)}</CodigoActividadEmisor><NumeroConsecutivo>${doc.numero}</NumeroConsecutivo><FechaEmision>${isoD}</FechaEmision><Emisor><Nombre>${xesc(doc.bizSnap.nombre)}</Nombre><Identificacion><Tipo>${doc.bizSnap.tipoId||'01'}</Tipo><Numero>${cedEmitNum}</Numero></Identificacion><Ubicacion><Provincia>${doc.bizSnap.provincia||'5'}</Provincia><Canton>${(doc.bizSnap.canton||'05').padStart(2,'0')}</Canton><Distrito>${(doc.bizSnap.distrito||'03').padStart(2,'0')}</Distrito>${doc.bizSnap.barrio?`<Barrio>${xesc(doc.bizSnap.barrio)}</Barrio>`:''}<OtrasSenas>${xesc(doc.bizSnap.dir)}</OtrasSenas></Ubicacion><CorreoElectronico>${xesc(doc.bizSnap.email)}</CorreoElectronico></Emisor>${recXML}<CondicionVenta>01</CondicionVenta><DetalleServicio>${detalle}</DetalleServicio><ResumenFactura><CodigoTipoMoneda><CodigoMoneda>${monC}</CodigoMoneda><TipoCambio>${tcV}</TipoCambio></CodigoTipoMoneda><TotalServGravados>${doc.afterAll.toFixed(5)}</TotalServGravados><TotalGravado>${doc.afterAll.toFixed(5)}</TotalGravado><TotalExento>0.00000</TotalExento><TotalExonerado>0.00000</TotalExonerado><TotalNoSujeto>0.00000</TotalNoSujeto><TotalVenta>${doc.afterAll.toFixed(5)}</TotalVenta><TotalVentaNeta>${doc.afterAll.toFixed(5)}</TotalVentaNeta>${desgloseXML}<TotalImpuesto>${doc.iva.toFixed(5)}</TotalImpuesto><MedioPago><TipoMedioPago>${payCode}</TipoMedioPago><TotalMedioPago>${doc.total.toFixed(5)}</TotalMedioPago></MedioPago><TotalComprobante>${doc.total.toFixed(5)}</TotalComprobante></ResumenFactura>${doc.tipo==='NC'&&doc.ncRef?`<InformacionReferencia><TipoDoc>01</TipoDoc><Numero>${xesc(doc.ncRef)}</Numero><FechaEmision>${isoD}</FechaEmision><Codigo>01</Codigo><Razon>Anulación</Razon></InformacionReferencia>`:''}${doc.obs?`<Otros><OtroTexto>${xesc(doc.obs)}</OtroTexto></Otros>`:''}</${ns}>`;
-}
-
+  return `<?xml version="1.0" encoding="utf-8"?>
+<${ns} xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns="https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower}" xsi:schemaLocation="https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower} https://cdn.comprobanteselectronicos.go.cr/xml-schemas/v4.4/${nsLower}.xsd">
+  <Clave>${doc.clave}</Clave>
+  <ProveedorSistemas>${cedEmit}</ProveedorSistemas>
+  <CodigoActividadEmisor>${xesc(doc.bizSnap.ciiu)}</CodigoActividadEmisor>
+  <NumeroConsecutivo>${doc.numero}</NumeroConsecutivo>
+  <FechaEmision>${isoD}</FechaEmision>
+  <Emisor>
+    <Nombre>${xesc(doc.bizSnap.nombre)}</Nombre>
+    <Identificacion><Tipo>${doc.bizSnap.tipoId||'01'}</Tipo><Numero>${cedEmitNum}</Numero></Identificacion>
+    <Ubicacion>
+      <Provincia>${doc.bizSnap.provincia||'5'}</Provincia>
+      <Canton>${(doc.bizSnap.canton||'05').padStart(2,'0')}</Canton>
+      <Distrito>${(doc.bizSnap.distrito||'03').padStart(2,'0')}</Distrito>
+      ${doc.bizSnap.barrio?`<Barrio>${xesc(doc.bizSnap.barrio)}</Barrio>`:''}
+      <OtrasSenas>${xesc(doc.bizSnap.dir)}</OtrasSenas>
+    </Ubicacion>
+    <CorreoElectronico>${xesc(doc.bizSnap.email)}</CorreoElectronico>
+  </Emisor>
+  ${recXML}
+  <CondicionVenta>01</CondicionVenta>
+  <DetalleServicio>${detalle}</DetalleServicio>
+  <ResumenFactura>
+    <CodigoTipoMoneda><CodigoMoneda>${monC}</CodigoMoneda><TipoCambio>${tcV}</TipoCambio></CodigoTipoMoneda>
+    <TotalServGravados>${doc.afterAll.toFixed(5)}</TotalServGravados>
+    <TotalServExentos>0.00000</TotalServExentos>
+    <TotalServNoSujetos>0.00000</TotalServNoSujetos>
+    <TotalMercanciasGravadas>0.00000</TotalMercanciasGravadas>
+    <TotalMercanciasExentas>0.00000</TotalMercanciasExentas>
+    <TotalGravado>${doc.afterAll.toFixed(5)}</TotalGravado>
+    <TotalExento>0.00000</TotalExento>
+    <TotalExonerado>0.00000</TotalExonerado>
+    <TotalNoSujeto>0.00000</TotalNoSujeto>
+    <TotalVenta>${doc.afterAll.toFixed(5)}</TotalVenta>
+    <TotalDescuentos>0.00000</TotalDescuentos>
+    <TotalVentaNeta>${doc.afterAll.toFixed(5)}</TotalVentaNeta>
+    ${desgloseXML}
+    <TotalImpuesto>${doc.iva.toFixed(5)}</TotalImpuesto>
+    <TotalComprobante>${doc.total.toFixed(5)}</TotalComprobante>
+  </ResumenFactura>
+  ${doc.tipo==='NC'&&doc.ncRef?`<InformacionReferencia><TipoDoc>01</TipoDoc><Numero>${xesc(doc.ncRef)}</Numero><FechaEmision>${isoD}</FechaEmision><Codigo>01</Codigo><Razon>Anulación</Razon></InformacionReferencia>`:''}
+  <MedioPago><TipoMedioPago>${payCode}</TipoMedioPago></MedioPago>
+  ${doc.obs?`<Otros><OtroTexto>${xesc(doc.obs)}</OtroTexto></Otros>`:''}
+</${ns}>`;
 /* ═══════════════════════════════════════════════════
    TICKET TEXT
 ═══════════════════════════════════════════════════ */
