@@ -1614,6 +1614,11 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
 <div id="toasts"></div>
 
 <script>
+function obtenerFechaEmisionCR() {
+const fecha = new Date();
+fecha.setHours(fecha.getHours() - 6); 
+return fecha.toISOString().substring(0, 19) + '-06:00';
+}
 /* ═══════════════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════════════ */
@@ -2213,7 +2218,7 @@ function buildXML(doc){
   // FechaEmision formato local sin timezone (como TicoFactura): 2026-04-07T09:53:54.000
   const fd=new Date(doc.fecha);
   const pad=(n)=>String(n).padStart(2,'0');
-  const isoD=`${fd.getFullYear()}-${pad(fd.getMonth()+1)}-${pad(fd.getDate())}T${pad(fd.getHours())}:${pad(fd.getMinutes())}:${pad(fd.getSeconds())}.000`;
+  const isoD=`${fd.getFullYear()}-${pad(fd.getMonth()+1)}-${pad(fd.getDate())}T${pad(fd.getHours())}:${pad(fd.getMinutes())}:${pad(fd.getSeconds())}-06:00`;
   const monC=doc.moneda==='USD'?'USD':'CRC';
   const tcV=doc.moneda==='USD'?doc.tc.toFixed(5):'1.00000';
   const payC={efectivo:'01',tarjeta:'02',sinpe:'06',transferencia:'04'};
