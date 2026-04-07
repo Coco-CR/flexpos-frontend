@@ -2272,6 +2272,7 @@ function buildXML(doc){
   </Emisor>
   ${recXML}
   <CondicionVenta>01</CondicionVenta>
+  <MedioPago><TipoMedioPago>${payCode}</TipoMedioPago></MedioPago>
   <DetalleServicio>${detalle}</DetalleServicio>
   <ResumenFactura>
     <CodigoTipoMoneda><CodigoMoneda>${monC}</CodigoMoneda><TipoCambio>${tcV}</TipoCambio></CodigoTipoMoneda>
@@ -2292,7 +2293,6 @@ function buildXML(doc){
     <TotalComprobante>${doc.total.toFixed(5)}</TotalComprobante>
   </ResumenFactura>
   ${doc.tipo==='NC'&&doc.ncRef?`<InformacionReferencia><TipoDoc>01</TipoDoc><Numero>${xesc(doc.ncRef)}</Numero><FechaEmision>${isoD}</FechaEmision><Codigo>01</Codigo><Razon>Anulación</Razon></InformacionReferencia>`:''}
-  <MedioPago><TipoMedioPago>${payCode}</TipoMedioPago></MedioPago>
   ${doc.obs?`<Otros><OtroTexto>${xesc(doc.obs)}</OtroTexto></Otros>`:''}
 </${ns}>`;
 /* ═══════════════════════════════════════════════════
