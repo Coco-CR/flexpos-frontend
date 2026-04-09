@@ -2383,6 +2383,14 @@ function histNC(id){
   curClient=d.cliente?.tipoId!=='final'?d.cliente:null;
   document.getElementById('cart-cli-name').value=curClient?.nombre||'';
   document.getElementById('nc-ref').value=d.numero;
+  // Guardar la clave de 50 dígitos y el tipo del documento original (necesarios para
+  // <InformacionReferencia> al firmar la NC en Hacienda)
+  window._ncRefData={
+    claveOriginal: d.clave,
+    tipoOriginal:  d.tipo,    // 'TE' o 'FE'
+    fechaOriginal: d.fecha,
+    numeroOriginal:d.numero,
+  };
   setDoc('NC');go('pos');renderCart();toast('Nota de Crédito lista para confirmar','w');
 }
 
@@ -3205,13 +3213,14 @@ async function enviarAHacienda(doc){
   try{
     // ── Construir el objeto datosVenta para el backend ──
     // El backend arma el XML, lo firma y lo envía a Hacienda en un solo paso.
-    // Solo TE soportado en Fase 1; FE/NC se agregarán después.
+    // Soporta TE, FE y NC. Cada tipo agrega bloques específicos:
+    //   TE → solo emisor + items
+    //   FE → además receptor (cliente registrado)
+    //   NC → además receptor + referencia al documento original
 
-    // Mapeo de medio de pago del frontend a código Hacienda v4.4
     const medioPagoMap={efectivo:'01',tarjeta:'02',sinpe:'06',transferencia:'04',cheque:'03'};
 
-    // Mapeo de tarifa de IVA: el frontend usa strings ('13','4','2','1','0')
-    // pero el backend espera números. Convertir.
+    // Mapear items al formato del backend
     const items=doc.items.map(it=>{
       const tarifaPct=parseFloat(it.tarifa_iva||'13')||0;
       const cantidad=Number(it.qty)||1;
@@ -3230,10 +3239,11 @@ async function enviarAHacienda(doc){
       };
     });
 
+    // Datos base comunes a TE/FE/NC
     const datosVenta={
-      tipo:        doc.tipo,                    // 'TE' (único soportado en Fase 1)
-      clave:       doc.clave,                   // ya generada en procesarPago
-      consecutivo: doc.numero,                  // ya generado en procesarPago
+      tipo:        doc.tipo,
+      clave:       doc.clave,
+      consecutivo: doc.numero,
       emisor:{
         nombre:               doc.bizSnap.nombre||'',
         tipoIdentificacion:   doc.bizSnap.tipoId||'01',
@@ -3257,7 +3267,45 @@ async function enviarAHacienda(doc){
       observaciones:  doc.obs||'',
     };
 
-    // Llamar al backend con el nuevo contrato
+    // ── Receptor: obligatorio para FE y NC ──
+    if(doc.tipo==='FE'||doc.tipo==='NC'){
+      const cli=doc.cliente;
+      if(!cli||cli.tipoId==='final'||!cli.cedula||!cli.nombre){
+        toast(`${doc.tipo} requiere un cliente registrado con cédula y nombre`,'e');
+        allHistory[idx].haciendaEstado='rechazado';
+        allHistory[idx].haciendaDetalle='Falta receptor (cliente registrado con cédula)';
+        return;
+      }
+      datosVenta.receptor={
+        nombre:               cli.nombre,
+        tipoIdentificacion:   cli.tipoId||'01',
+        numeroIdentificacion:(cli.cedula||'').replace(/\D/g,''),
+        correo:               cli.email||undefined,
+      };
+    }
+
+    // ── Referencia: obligatoria para NC ──
+    // window._ncRefData fue guardado por histNC() al iniciar la NC desde el historial
+    if(doc.tipo==='NC'){
+      const ref=window._ncRefData;
+      if(!ref||!ref.claveOriginal){
+        toast('NC requiere referenciar un documento original','e');
+        allHistory[idx].haciendaEstado='rechazado';
+        allHistory[idx].haciendaDetalle='Falta referencia al documento original';
+        return;
+      }
+      // tipoDoc en InformacionReferencia: 01=FE, 04=TE
+      const tipoDocMap={FE:'01',TE:'04'};
+      datosVenta.referencia={
+        tipoDoc:      tipoDocMap[ref.tipoOriginal]||'04',
+        numero:       ref.claveOriginal,           // CLAVE de 50 dígitos, no consecutivo
+        fechaEmision: ref.fechaOriginal||new Date().toISOString(),
+        codigo:       '01',                         // 01 = anulación
+        razon:        doc.obs||'Anulación de documento',
+      };
+    }
+
+    // Llamar al backend
     const resp=await fetch(`${BACKEND_URL}/api/firmar-y-enviar`,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':BACKEND_KEY},
@@ -3277,7 +3325,7 @@ async function enviarAHacienda(doc){
 
     const data=await resp.json();
 
-    // Guardar el XML firmado que devolvió el backend, para que dlXML pueda descargarlo
+    // Guardar el XML firmado para que dlXML pueda descargarlo
     if(data.xmlFirmado){
       allHistory[idx].xml=data.xmlFirmado;
     }
@@ -3296,6 +3344,11 @@ async function enviarAHacienda(doc){
       toast('✗ Hacienda rechazó el documento — ver detalle en Historial','e');
     } else {
       toast('Documento enviado a Hacienda — pendiente de confirmación','w');
+    }
+
+    // Limpiar el estado de NC después de un envío exitoso de NC
+    if(doc.tipo==='NC'){
+      window._ncRefData=null;
     }
   }catch(e){
     const idx2=allHistory.findIndex(x=>x.id===doc.id);
