@@ -2147,7 +2147,7 @@ async function procesarPago(){
     moneda:currency,tc:TC,payMethod,obs,ncRef:docType==='NC'?ncRef:'',
     globDisc:{...globDisc},status:'emitida',bizSnap:{...BIZ},xml:'',
   };
-  doc.xml=buildXML(doc);
+  // doc.xml se llenará después con el XML firmado que regrese del backend
   if(docType!=='NC')await decrStock(doc.items);else await incrStock(doc.items);
   allHistory.unshift(doc);lss('pos_history',JSON.stringify(allHistory));
 
@@ -3295,30 +3295,73 @@ async function enviarAHacienda(doc){
   if(idx<0)return;
 
   try{
-    // 1. Firmar y enviar en un solo llamado al backend
+    // ── Construir el objeto datosVenta para el backend ──
+    // El backend arma el XML, lo firma y lo envía a Hacienda en un solo paso.
+    // Solo TE soportado en Fase 1; FE/NC se agregarán después.
+
+    // Mapeo de medio de pago del frontend a código Hacienda v4.4
+    const medioPagoMap={efectivo:'01',tarjeta:'02',sinpe:'06',transferencia:'04',cheque:'03'};
+
+    // Mapeo de tarifa de IVA: el frontend usa strings ('13','4','2','1','0')
+    // pero el backend espera números. Convertir.
+    const items=doc.items.map(it=>{
+      const tarifaPct=parseFloat(it.tarifa_iva||'13')||0;
+      const cantidad=Number(it.qty)||1;
+      const precioUnitario=Number(it.precio)||0;
+      const baseLinea=precioUnitario*cantidad;
+      const descuentoMonto=Math.round(baseLinea*((it.discPct||0)/100));
+      return {
+        cabys:          it.cabys||'',
+        cantidad:       cantidad,
+        unidadMedida:   'Unid',
+        detalle:        it.nombre||'',
+        precioUnitario: precioUnitario,
+        tarifaIvaPct:   tarifaPct,
+        descuentoMonto: descuentoMonto,
+        naturalezaDescuento: descuentoMonto>0?'Descuento comercial':undefined,
+      };
+    });
+
+    const datosVenta={
+      tipo:        doc.tipo,                    // 'TE' (único soportado en Fase 1)
+      clave:       doc.clave,                   // ya generada en procesarPago
+      consecutivo: doc.numero,                  // ya generado en procesarPago
+      emisor:{
+        nombre:               doc.bizSnap.nombre||'',
+        tipoIdentificacion:   doc.bizSnap.tipoId||'01',
+        numeroIdentificacion:(doc.bizSnap.cedula||'').replace(/\D/g,''),
+        codigoActividad:      doc.bizSnap.ciiu||doc.bizSnap.codigoActividad||'',
+        proveedorSistemas:   (doc.bizSnap.cedula||'').replace(/\D/g,''),
+        ubicacion:{
+          provincia:  doc.bizSnap.provincia||'1',
+          canton:     doc.bizSnap.canton||'01',
+          distrito:   doc.bizSnap.distrito||'01',
+          barrio:     doc.bizSnap.barrio||'',
+          otrasSenas: doc.bizSnap.dir||doc.bizSnap.otrasSenas||'',
+        },
+        correo: doc.bizSnap.email||'',
+      },
+      moneda:         doc.moneda||'CRC',
+      tipoCambio:     Number(doc.tc)||1,
+      medioPago:      medioPagoMap[doc.payMethod]||'01',
+      condicionVenta:'01',
+      items:          items,
+      observaciones:  doc.obs||'',
+    };
+
+    // Llamar al backend con el nuevo contrato
     const resp=await fetch(`${BACKEND_URL}/api/firmar-y-enviar`,{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':BACKEND_KEY},
-      body:JSON.stringify({
-        xml:    doc.xml,
-        clave:  doc.clave,
-        tipo:   doc.tipo,
-        receptor: (doc.tipo!=='TE'&&doc.cliente?.tipoId!=='final')?{
-          tipoIdentificacion:  doc.cliente.tipoId,
-          numeroIdentificacion:(doc.cliente.cedula||'').replace(/\D/g,''),
-          nombre:               doc.cliente.nombre,
-          correo:               doc.cliente.email||'',
-        }:null,
-      }),
+      body:JSON.stringify({datosVenta}),
     });
 
     if(!resp.ok){
       const err=await resp.json().catch(()=>({}));
       allHistory[idx].haciendaEstado='rechazado';
       allHistory[idx].haciendaDetalle=`Error backend: ${err.error||resp.status}${err.detalles?'\n'+err.detalles.join('\n'):''}`;
-      toast('Error al enviar: '+( err.error||resp.status),'e');
+      toast('Error al enviar: '+(err.error||resp.status),'e');
       if(err.detalles?.length){
-        // Mostrar primer error de validación
         setTimeout(()=>toast('XML: '+err.detalles[0],'e'),400);
       }
       return;
@@ -3326,11 +3369,14 @@ async function enviarAHacienda(doc){
 
     const data=await resp.json();
 
-    // El backend devuelve ind_estado inmediatamente (202 = procesando)
-    // o el estado final si Hacienda responde rápido
-    const estado=data.ind_estado||data.estado||'procesando';
-    allHistory[idx].haciendaEstado=estado==='202'||estado==='procesando'?'pendiente':estado;
-    allHistory[idx].haciendaDetalle=estado==='procesando'||estado==='202'
+    // Guardar el XML firmado que devolvió el backend, para que dlXML pueda descargarlo
+    if(data.xmlFirmado){
+      allHistory[idx].xml=data.xmlFirmado;
+    }
+
+    const estado=data.ind_estado||data.estado||'recibido';
+    allHistory[idx].haciendaEstado=(estado==='recibido'||estado==='procesando')?'pendiente':estado;
+    allHistory[idx].haciendaDetalle=(estado==='recibido'||estado==='procesando')
       ? 'Documento enviado — Hacienda procesando (usa 🏛 para verificar)'
       : data.mensajeHacienda
         ? `${data.mensajeHacienda.codigo}: ${data.mensajeHacienda.detalle}`
