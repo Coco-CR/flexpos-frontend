@@ -2295,6 +2295,7 @@ function buildXML(doc){
   ${doc.tipo==='NC'&&doc.ncRef?`<InformacionReferencia><TipoDoc>01</TipoDoc><Numero>${xesc(doc.ncRef)}</Numero><FechaEmision>${isoD}</FechaEmision><Codigo>01</Codigo><Razon>Anulación</Razon></InformacionReferencia>`:''}
   ${doc.obs?`<Otros><OtroTexto>${xesc(doc.obs)}</OtroTexto></Otros>`:''}
 </${ns}>`;
+}
 /* ═══════════════════════════════════════════════════
    TICKET TEXT
 ═══════════════════════════════════════════════════ */
