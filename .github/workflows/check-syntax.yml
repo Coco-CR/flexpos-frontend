@@ -1,0 +1,28 @@
+name: Check JS Syntax
+
+on:
+  push:
+    paths:
+      - 'index.html'
+      - '.github/workflows/check-syntax.yml'
+  workflow_dispatch:  # permite correrlo manualmente desde la pestaña Actions
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Extract JS from index.html
+        run: |
+          sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > flexpos.js
+          echo "JS extraído: $(wc -l < flexpos.js) líneas"
+
+      - name: Validate JS syntax
+        run: node --check flexpos.js
