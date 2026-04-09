@@ -1,14 +1,14 @@
-name: Check JS Syntax
+name: Find JS Syntax Error
 
 on:
   push:
     paths:
       - 'index.html'
       - '.github/workflows/check-syntax.yml'
-  workflow_dispatch:  # permite correrlo manualmente desde la pestaña Actions
+  workflow_dispatch:
 
 jobs:
-  check:
+  bisect:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,7 +22,42 @@ jobs:
       - name: Extract JS from index.html
         run: |
           sed -n '/<script>/,/<\/script>/p' index.html | sed '1d;$d' > flexpos.js
-          echo "JS extraído: $(wc -l < flexpos.js) líneas"
+          TOTAL=$(wc -l < flexpos.js)
+          echo "JS extraído: $TOTAL líneas"
+          echo "TOTAL=$TOTAL" >> $GITHUB_ENV
 
-      - name: Validate JS syntax
-        run: node --check flexpos.js
+      - name: Bisect — find first prefix that needs more closing braces
+        run: |
+          set +e
+          TOTAL=$(wc -l < flexpos.js)
+          
+          # Para cada checkpoint, tomamos las primeras N líneas + un cierre artificial
+          # y vemos si compila. La idea: mientras el código está balanceado, agregar }
+          # extra causa "Unexpected token". Cuando empieza a faltar una }, agregar una }
+          # extra al final hace que SÍ compile.
+          
+          echo "Probando prefijos del archivo:"
+          echo ""
+          for N in 100 500 1000 1500 1800 2000 2100 2150 2200 2250 2300 2350 2400 2438; do
+            head -n $N flexpos.js > /tmp/prefix.js
+            
+            # ¿El prefijo solo, sin cerrar, compila?
+            node --check /tmp/prefix.js 2>/dev/null
+            CLEAN=$?
+            
+            # ¿Compila si le agregamos UNA llave extra al final?
+            cp /tmp/prefix.js /tmp/prefix1.js
+            echo "}" >> /tmp/prefix1.js
+            node --check /tmp/prefix1.js 2>/dev/null
+            ONE=$?
+            
+            if [ $CLEAN -eq 0 ]; then
+              STATUS="✅ balanceado"
+            elif [ $ONE -eq 0 ]; then
+              STATUS="⚠️  falta UNA llave (el bug está antes o en línea $N)"
+            else
+              STATUS="🔄 dentro de un bloque incompleto (normal a media función)"
+            fi
+            
+            printf "  línea %5d: %s\n" "$N" "$STATUS"
+          done
