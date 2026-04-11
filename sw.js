@@ -6,8 +6,8 @@
    - Cola offline → IndexedDB, sincroniza al reconectar
 ══════════════════════════════════════════════════════════ */
 
-const CACHE_NAME  = 'flexpos-v1';
-const SHELL_CACHE = 'flexpos-shell-v1';
+const CACHE_NAME  = 'flexpos-v2';
+const SHELL_CACHE = 'flexpos-shell-v2';
 const SYNC_TAG    = 'flexpos-sync';
 
 /* Archivos del App Shell a cachear en instalación */
@@ -42,45 +42,64 @@ self.addEventListener('activate', event => {
 
 /* ── FETCH ── */
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
+  const req = event.request;
+  const url = new URL(req.url);
+
+  /* REGLA 0 — Nunca interceptar nada que no sea GET.
+     El Cache API solo soporta GET. POST/PUT/DELETE pasan directo a la red. */
+  if (req.method !== 'GET') return;
+
+  /* REGLA 1 — Nunca cachear el backend de Hacienda (Railway).
+     Las respuestas de /api/firmar-y-enviar y /api/consultar/* deben ser
+     siempre frescas. Cachearlas sirvió respuestas viejas en intentos
+     posteriores y rompió la auto-consulta. */
+  if (url.pathname.startsWith('/api/')) return;
 
   /* Fuentes de Google y CDN → Cache First */
   if (url.hostname === 'fonts.googleapis.com' ||
       url.hostname === 'fonts.gstatic.com'    ||
       url.hostname === 'cdnjs.cloudflare.com') {
-    event.respondWith(cacheFirst(event.request));
+    event.respondWith(cacheFirst(req));
     return;
   }
 
   /* Supabase API → Network First con fallback offline */
   if (url.hostname.includes('supabase.co')) {
-    event.respondWith(networkFirstSupabase(event.request));
+    event.respondWith(networkFirstSupabase(req));
     return;
   }
 
-  /* App Shell (la propia página) → Cache First */
-  if (event.request.mode === 'navigate' ||
-      event.request.destination === 'document') {
+  /* App Shell (la propia página) → Network First con fallback a cache.
+     Cambiado desde Cache First para evitar quedar atascado en versión vieja
+     del index.html después de un deploy. */
+  if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(
-      caches.match('./').then(cached => cached || fetch(event.request))
+      fetch(req)
+        .then(resp => {
+          if (resp && resp.status === 200) {
+            const clone = resp.clone();
+            caches.open(SHELL_CACHE).then(c => c.put('./', clone));
+          }
+          return resp;
+        })
+        .catch(() => caches.match('./'))
     );
     return;
   }
 
-  /* Todo lo demás → Network con fallback a cache */
+  /* Todo lo demás GET → Network con fallback a cache */
   event.respondWith(
-    fetch(event.request)
+    fetch(req)
       .then(resp => {
         if (resp && resp.status === 200) {
           const clone = resp.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(req, clone));
         }
         return resp;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(req))
   );
 });
-
 /* ── BACKGROUND SYNC ── */
 self.addEventListener('sync', event => {
   if (event.tag === SYNC_TAG) {
