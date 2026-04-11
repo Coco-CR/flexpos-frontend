@@ -2150,7 +2150,6 @@ async function procesarPago(){
   // doc.xml se llenará después con el XML firmado que regrese del backend
   if(docType!=='NC')await decrStock(doc.items);else await incrStock(doc.items);
   allHistory.unshift(doc);lss('pos_history',JSON.stringify(allHistory));
-
   // ── Enviar a Hacienda automáticamente si hay backend configurado ──
   if(BACKEND_URL&&BACKEND_KEY){
     // Mostrar estado: firmando…
@@ -2160,11 +2159,17 @@ async function procesarPago(){
     enviarAHacienda(doc).then(()=>{
       lss('pos_history',JSON.stringify(allHistory));
       renderHist();
+      // Consulta automática con backoff 30s/60s/120s. Solo si el envío
+      // dejó el doc en estado "enviado" (no fallido). El botón manual
+      // sigue disponible y cancela este timer si se usa antes.
+      const docActual = allHistory.find(x => x.id === doc.id);
+      if (docActual && (docActual.haciendaEstado || '').toLowerCase() === 'enviado') {
+        scheduleAutoConsulta(doc.id, 1);
+      }
     }).catch(e=>{
       console.warn('[Hacienda] Error enviando:',e.message);
     });
   }
-
   showTicket(doc);closeM('m-cobrar');updateDash();
 }
 
@@ -3364,63 +3369,103 @@ async function enviarAHacienda(doc){
 /* ═══════════════════════════════════════════════════
    CONSULTAR ESTADO HACIENDA CR
 ═══════════════════════════════════════════════════ */
-async function consultarHacienda(docId){
-  const doc=allHistory.find(x=>x.id===docId);
-  if(!doc)return;
+// Timers de consulta automática post-emisión, indexados por clave.
+// Permite cancelar si el cajero toca el botón manual antes de que dispare.
+const autoConsultaTimers = new Map();
 
-  if(!BACKEND_URL||!BACKEND_KEY){
-    toast('Configura el backend para consultar Hacienda en tiempo real','w');
-    const idx=allHistory.findIndex(x=>x.id===docId);
-    if(idx>=0){
-      allHistory[idx].haciendaEstado=allHistory[idx].haciendaEstado||'pendiente';
-      allHistory[idx].haciendaDetalle='Sin backend configurado — usa ATV para verificar';
-      lss('pos_history',JSON.stringify(allHistory));renderHist();
+/**
+ * Agenda consulta automática a Hacienda con backoff: 30s → 60s → 120s.
+ * Máximo 3 intentos. Si en algún intento el estado ya no es "enviado"
+ * (osea Hacienda respondió aceptado/rechazado), detiene el ciclo.
+ * Silencioso en caso de aceptación; toast de error solo si rechazado.
+ */
+function scheduleAutoConsulta(docId, intento = 1) {
+  const delays = [30000, 60000, 120000]; // 30s, 60s, 120s
+  if (intento > delays.length) {
+    autoConsultaTimers.delete(docId);
+    return;
+  }
+  const delay = delays[intento - 1];
+  const timerId = setTimeout(async () => {
+    const doc = allHistory.find(x => x.id === docId);
+    if (!doc) { autoConsultaTimers.delete(docId); return; }
+    // Si el cajero ya consultó manualmente, el estado dejó de ser "enviado".
+    if (doc.haciendaEstado && doc.haciendaEstado !== 'enviado') {
+      autoConsultaTimers.delete(docId);
+      return;
+    }
+    await consultarHacienda(docId, { silent: true });
+    // Releer estado tras la consulta
+    const docAfter = allHistory.find(x => x.id === docId);
+    if (!docAfter) { autoConsultaTimers.delete(docId); return; }
+    const estado = (docAfter.haciendaEstado || '').toLowerCase();
+    if (estado === 'aceptado') {
+      autoConsultaTimers.delete(docId);
+      // Silencioso: no molestar al cajero con el caso feliz.
+    } else if (estado === 'rechazado') {
+      autoConsultaTimers.delete(docId);
+      toast(`Documento ${docAfter.clave?.slice(-8) || ''} RECHAZADO por Hacienda`, 'e');
+    } else {
+      // Aún "procesando" o "enviado" → siguiente reintento
+      scheduleAutoConsulta(docId, intento + 1);
+    }
+  }, delay);
+  autoConsultaTimers.set(docId, timerId);
+}
+   
+async function consultarHacienda(docId, opts = {}) {
+  const silent = opts.silent === true;
+  // Si había un timer automático pendiente para este doc, cancelarlo:
+  // el cajero (o la consulta auto misma) ya está consultando.
+  if (autoConsultaTimers.has(docId)) {
+    clearTimeout(autoConsultaTimers.get(docId));
+    autoConsultaTimers.delete(docId);
+  }
+  const doc = allHistory.find(x => x.id === docId);
+  if (!doc) return;
+  if (!BACKEND_URL || !BACKEND_KEY) {
+    if (!silent) toast('Configura el backend para consultar Hacienda en tiempo real', 'w');
+    const idx = allHistory.findIndex(x => x.id === docId);
+    if (idx >= 0) {
+      allHistory[idx].haciendaEstado = allHistory[idx].haciendaEstado || 'pendiente';
+      allHistory[idx].haciendaDetalle = 'Sin backend configurado — usa ATV para verificar';
+      lss('pos_history', JSON.stringify(allHistory));
+      renderHist();
     }
     return;
   }
-
-  const btn=document.querySelector(`[onclick="consultarHacienda('${docId}')"]`);
-  if(btn){btn.classList.add('loading');btn.textContent='Consultando…';}
-
-  try{
-    const r=await fetch(`${BACKEND_URL}/api/consultar/${doc.clave}`,{
-      headers:{'x-api-key':BACKEND_KEY}
+  const btn = document.querySelector(`[onclick="consultarHacienda('${docId}')"]`);
+  if (btn) {
+    btn.classList.add('loading');
+    btn.textContent = 'Consultando…';
+  }
+  try {
+    const r = await fetch(`${BACKEND_URL}/api/consultar/${doc.clave}`, {
+      headers: {
+        'x-api-key': BACKEND_KEY
+      }
     });
-
-    if(!r.ok){
-      const err=await r.json().catch(()=>({}));
-      toast(`Error ${r.status}: ${err.error||'Error del backend'}`, 'e');
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      if (!silent) toast(`Error ${r.status}: ${err.error || 'Error del backend'}`, 'e');
       return;
     }
-
-    const data=await r.json();
-    const idx=allHistory.findIndex(x=>x.id===docId);
-    if(idx>=0){
-      // no_encontrado = Hacienda no lo recibió → reenviar automáticamente
-      if(data.ind_estado==='no_encontrado'){
-        allHistory[idx].haciendaEstado='pendiente';
-        allHistory[idx].haciendaDetalle='Hacienda no tiene este documento. Reenviando…';
-        lss('pos_history',JSON.stringify(allHistory));renderHist();
-        toast('Documento no encontrado — reenviando a Hacienda…','w');
-        if(btn)btn.textContent='Enviando…';
-        await enviarAHacienda(doc);
-        lss('pos_history',JSON.stringify(allHistory));renderHist();
-        return;
-      }
-      allHistory[idx].haciendaEstado=data.ind_estado||'pendiente';
-      allHistory[idx].haciendaDetalle=data.mensajeHacienda
-        ?`Código ${data.mensajeHacienda.codigo}: ${data.mensajeHacienda.detalle}`
-        :(data.ind_estado==='aceptado'?'Documento aceptado por Hacienda CR':'');
-      lss('pos_history',JSON.stringify(allHistory));
+    const data = await r.json();
+    const idx = allHistory.findIndex(x => x.id === docId);
+    if (idx >= 0) {
+      allHistory[idx].haciendaEstado = data.ind_estado || 'recibido';
+      allHistory[idx].haciendaDetalle = data.respuesta_xml_decodificada || 'Respuesta procesada';
+      lss('pos_history', JSON.stringify(allHistory));
       renderHist();
-      const st=allHistory[idx].haciendaEstado;
-      toast(st==='aceptado'?'✓ Aceptado por Hacienda':st==='rechazado'?'✗ Rechazado por Hacienda':'Estado: '+st,
-        st==='aceptado'?'s':st==='rechazado'?'e':'w');
+      if (!silent) toast('Estado actualizado', 's');
     }
-  }catch(e){
-    toast('Error consultando: '+e.message,'e');
-  }finally{
-    if(btn){btn.classList.remove('loading');btn.textContent='🏛 Hacienda';}
+  } catch (e) {
+    if (!silent) toast('Error de red al consultar: ' + e.message, 'e');
+  } finally {
+    if (btn) {
+      btn.classList.remove('loading');
+      btn.textContent = '🔄';
+    }
   }
 }
 
