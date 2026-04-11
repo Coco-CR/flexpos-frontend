@@ -3390,7 +3390,11 @@ function scheduleAutoConsulta(docId, intento = 1) {
     const doc = allHistory.find(x => x.id === docId);
     if (!doc) { autoConsultaTimers.delete(docId); return; }
     // Si el cajero ya consultó manualmente, el estado dejó de ser "enviado".
-    if (doc.haciendaEstado && doc.haciendaEstado !== 'enviado') {
+// Solo seguir consultando si el doc está realmente pendiente.
+    // Si ya quedó aceptado/rechazado (por consulta manual previa) o
+    // sin estado (error), no tiene sentido seguir.
+    const estadoActual = (doc.haciendaEstado || '').toLowerCase();
+    if (estadoActual !== 'pendiente' && estadoActual !== 'procesando' && estadoActual !== 'recibido') {
       autoConsultaTimers.delete(docId);
       return;
     }
