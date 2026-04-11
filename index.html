@@ -2163,7 +2163,7 @@ async function procesarPago(){
       // dejó el doc en estado "enviado" (no fallido). El botón manual
       // sigue disponible y cancela este timer si se usa antes.
       const docActual = allHistory.find(x => x.id === doc.id);
-      if (docActual && (docActual.haciendaEstado || '').toLowerCase() === 'enviado') {
+      if (docActual && (docActual.haciendaEstado || '').toLowerCase() === 'pendiente') {
         scheduleAutoConsulta(doc.id, 1);
       }
     }).catch(e=>{
