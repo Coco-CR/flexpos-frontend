@@ -4022,6 +4022,8 @@ function loadCfg(){
   document.getElementById('cfg-backend').value=BACKEND_URL;
   document.getElementById('cfg-apikey').value=BACKEND_KEY;
   document.getElementById('cfg-bccr-token').value=ls('bccr_token')||'';
+  document.getElementById('cfg-sucursal').value=TERM.sucursal;
+  document.getElementById('cfg-terminal').value=TERM.terminal;   
 }
 function saveBackend(){
   BACKEND_URL=document.getElementById('cfg-backend').value.trim().replace(/\/$/,'');
@@ -4064,10 +4066,6 @@ function saveBiz(){
   lss('term_sucursal',suc);
   lss('term_terminal',term);
   toast('Sucursal y Terminal guardados','s');
-}
-   function loadTerminal(){
-  document.getElementById('cfg-sucursal').value=TERM.sucursal;
-  document.getElementById('cfg-terminal').value=TERM.terminal;
 }
    
 /* ═══════════════════════════════════════════════════
