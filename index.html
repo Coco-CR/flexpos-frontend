@@ -2609,12 +2609,14 @@ async function anularDocumento(docOriginal, motivo){
   allHistory.unshift(ncDoc);
   lss('pos_history',JSON.stringify(allHistory));
   renderHist();
-
   await enviarAHacienda(ncDoc);
   lss('pos_history',JSON.stringify(allHistory));
   renderHist();
-
   const ncFinal=allHistory.find(x=>x.id===ncDoc.id);
+  // Auto-consulta con backoff (mismo patrón que openCobrar)
+  if(ncFinal && (ncFinal.haciendaEstado||'').toLowerCase()==='pendiente'){
+    scheduleAutoConsulta(ncFinal.id, 1);
+  }
   if(ncFinal?.haciendaEstado==='rechazado')return null;
   return ncFinal;
 }
