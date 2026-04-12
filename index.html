@@ -1258,6 +1258,24 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
           <div class="field"><label>Dirección exacta</label><input type="text" id="cfg-biz-dir" placeholder="San José, Costa Rica"></div>
           <button class="btn btn-p" onclick="saveBiz()">💾 Guardar datos</button>
         </div>
+         <div class="cfg-section">
+  <div class="cfg-sec-title">🖥️ Este dispositivo (Sucursal y Terminal)</div>
+  <div class="info-box">
+    Identifica esta caja dentro de tu negocio. Si tienes varios POS, cada uno debe tener un <b>número de terminal distinto</b> para que los consecutivos no choquen en Hacienda.<br>
+    Ejemplo: POS principal = Terminal <code>00001</code>, FlexPOS = Terminal <code>00002</code>.
+  </div>
+  <div class="frow">
+    <div class="field">
+      <label>Sucursal (3 dígitos)</label>
+      <input type="text" id="cfg-sucursal" maxlength="3" placeholder="001">
+    </div>
+    <div class="field">
+      <label>Terminal (5 dígitos)</label>
+      <input type="text" id="cfg-terminal" maxlength="5" placeholder="00002">
+    </div>
+  </div>
+  <button class="btn btn-p" onclick="saveTerminal()">💾 Guardar</button>
+</div>
         <div class="cfg-section">
           <div class="cfg-sec-title">🖼️ Logo del negocio (PDF)</div>
           <div class="info-box">El logo aparece en la esquina superior del PDF de facturas. Tamaño recomendado: 200×80px. Formatos: PNG, JPG.</div>
@@ -1687,6 +1705,10 @@ let BIZ = { nombre:ls('biz_nombre')||'Mi Negocio S.A.', cedula:ls('biz_cedula')|
   tipoId:ls('biz_tipoId')||ls('biz_tipo_id')||'01',
   ciiu:ls('biz_ciiu')||'4711', email:ls('biz_email')||'facturacion@negocio.cr',
   tel:ls('biz_tel')||'22001234', dir:ls('biz_dir')||'San José, Costa Rica' };
+let TERM = {
+  sucursal: ls('term_sucursal') || '001',
+  terminal: ls('term_terminal') || '00002',
+};
 let BACKEND_URL = ls('backend_url')||'', BACKEND_KEY = ls('backend_key')||'';
 let TC    = Number(ls('tipo_cambio'))||650;
 let CONSEC= JSON.parse(ls('pos_consec')||'{"FE":0,"TE":0,"NC":0}');
@@ -2260,7 +2282,7 @@ async function incrStock(items){
 /* ═══════════════════════════════════════════════════
    CONSECUTIVO & CLAVE — Hacienda CR v4.4
 ═══════════════════════════════════════════════════ */
-function buildConsec(t,c){const tc={FE:'01',TE:'04',NC:'03'};return'001'+'00001'+tc[t]+c;}
+function buildConsec(t,c){const tc={FE:'01',TE:'04',NC:'03'};return TERM.sucursal+TERM.terminal+tc[t]+c;}
 function buildClave(t,d,ced,c){
   const pad=(s,n)=>String(s).padStart(n,'0');
   const dd=pad(d.getDate(),2),mm=pad(d.getMonth()+1,2),yy=String(d.getFullYear()).slice(-2);
@@ -4032,7 +4054,22 @@ function saveBiz(){
   Object.entries(BIZ).forEach(([k,v])=>lss('biz_'+k,v));
   toast('Datos del negocio guardados','s');
 }
-
+   function saveTerminal(){
+  const suc=document.getElementById('cfg-sucursal').value.trim().replace(/\D/g,'');
+  const term=document.getElementById('cfg-terminal').value.trim().replace(/\D/g,'');
+  if(suc.length!==3)return toast('Sucursal debe ser 3 dígitos','e');
+  if(term.length!==5)return toast('Terminal debe ser 5 dígitos','e');
+  TERM.sucursal=suc;
+  TERM.terminal=term;
+  lss('term_sucursal',suc);
+  lss('term_terminal',term);
+  toast('Sucursal y Terminal guardados','s');
+}
+   function loadTerminal(){
+  document.getElementById('cfg-sucursal').value=TERM.sucursal;
+  document.getElementById('cfg-terminal').value=TERM.terminal;
+}
+   
 /* ═══════════════════════════════════════════════════
    TIPO DE CAMBIO
 ═══════════════════════════════════════════════════ */
