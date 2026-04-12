@@ -835,6 +835,37 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
 @media(max-width:640px){
   .tb-nav .tnav span:not(.tnav-badge){display:none;}
 }
+   /* NC — estilos de rediseño */
+.btn-corregir{
+  background:#d97706;
+  color:#fff;
+  border-color:#b45309;
+  font-weight:600;
+}
+.btn-corregir:hover:not(:disabled){
+  background:#b45309;
+}
+.btn-corregir:disabled{
+  background:#d1d5db;
+  color:#6b7280;
+  border-color:#d1d5db;
+  cursor:not-allowed;
+}
+.hist-anulada{
+  opacity:.55;
+  background:#f9fafb;
+}
+.hist-anulada .hc-num,
+.hist-anulada .hc-cli,
+.hist-anulada .hc-tot{
+  text-decoration:line-through;
+}
+.badge-anulada{
+  background:#7f1d1d;
+  color:#fff;
+  font-weight:700;
+  letter-spacing:.3px;
+}
 </style>
 </head>
 <body>
@@ -2332,6 +2363,18 @@ function printTicket(){
 function dlHistXML(){if(viewDoc)dlXML(viewDoc);}
 function dlHistPDF(){if(viewDoc)dlPDF(viewDoc);}
 
+   /* ═══════════════════════════════════════════════════
+   HELPERS NC — bloqueo y estado de anulación
+═══════════════════════════════════════════════════ */
+function facturaYaTieneNC(doc){
+  if(!doc||doc.tipo==='NC')return false;
+  return allHistory.some(x=>x.tipo==='NC'&&x.ncRef===doc.numero&&x.haciendaEstado!=='rechazado');
+}
+
+function carritoTieneItems(){
+  return Array.isArray(cart)&&cart.length>0;
+}
+
 /* ═══════════════════════════════════════════════════
    HISTORIAL
 ═══════════════════════════════════════════════════ */
@@ -2343,11 +2386,12 @@ function renderHist(){
   const ico={FE:'🧾',TE:'🏷',NC:'↩'};
   el.innerHTML=list.map(d=>{
     // Badge estado Hacienda
+    const anulada=facturaYaTieneNC(d);
     const hEst=d.haciendaEstado||'pendiente';
     const hBadgeCls={aceptado:'hacienda-ok',rechazado:'hacienda-rech',pendiente:'hacienda-pend',na:'hacienda-na'}[hEst]||'hacienda-pend';
     const hBadgeTxt={aceptado:'✓ Aceptado',rechazado:'✗ Rechazado',pendiente:'⏳ Pendiente',na:'— Local'}[hEst]||'⏳ Pendiente';
     const hDetail=d.haciendaDetalle?`<div class="hacienda-detail ${hEst==='rechazado'?'err':''}">${esc(d.haciendaDetalle)}</div>`:'';
-    return`<div class="hist-card">
+    return`<div class="hist-card${anulada?' hist-anulada':''}">
       <div class="hc-type ${d.tipo}">${ico[d.tipo]||'📄'}</div>
       <div>
         <div class="hc-num">${d.numero}</div>
@@ -2356,6 +2400,7 @@ function renderHist(){
         <div style="display:flex;gap:5px;margin-top:4px;flex-wrap:wrap;">
           <span class="bstatus ${d.tipo==='NC'?'nc':'em'}">${{FE:'Factura',TE:'Tiquete',NC:'Nota Créd.'}[d.tipo]}</span>
           <span class="bstatus ${hBadgeCls}">${hBadgeTxt}</span>
+          ${anulada?'<span class="bstatus badge-anulada">🚫 ANULADA</span>':''}
         </div>
         ${hDetail}
       </div>
@@ -2365,7 +2410,10 @@ function renderHist(){
         <div class="hc-acts">
           <button class="btn btn-s btn-sm" onclick="viewHistDoc('${d.id}')">👁 Ver</button>
           <button class="btn-hacienda" onclick="consultarHacienda('${d.id}')" title="Consultar estado en Hacienda CR">🏛 Hacienda</button>
-          <button class="btn btn-o btn-sm" onclick="histNC('${d.id}')" ${d.tipo==='NC'?'disabled':''}>↩ NC</button>
+          ${d.tipo!=='NC'?`
+            <button class="btn btn-corregir btn-sm" onclick="iniciarCorregir('${d.id}')" ${anulada?'disabled':''} title="${anulada?'Esta factura ya tiene NC':'Emite NC y clona items al carrito para re-facturar'}">↩ Corregir</button>
+            <button class="btn btn-o btn-sm" onclick="iniciarAnular('${d.id}')" ${anulada?'disabled':''} title="${anulada?'Esta factura ya tiene NC':'Emite NC y deja el documento anulado'}">Anular</button>
+          `:''}
           <button class="btn btn-s btn-sm" onclick="dlXML(allHistory.find(x=>x.id==='${d.id}'))">XML</button>
           <button class="btn btn-p btn-sm" onclick="dlPDF(allHistory.find(x=>x.id==='${d.id}'))">PDF</button>
         </div>
@@ -2397,6 +2445,17 @@ function histNC(id){
     numeroOriginal:d.numero,
   };
   setDoc('NC');go('pos');renderCart();toast('Nota de Crédito lista para confirmar','w');
+}
+   function iniciarCorregir(id){
+  const d=allHistory.find(x=>x.id===id);if(!d)return;
+  if(facturaYaTieneNC(d)){toast('Esta factura ya tiene una NC emitida','e');return;}
+  if(carritoTieneItems()){toast('Vaciá el carrito antes de corregir una venta','e');return;}
+  toast('TODO: abrir modal Corregir para '+d.numero,'w');
+}
+function iniciarAnular(id){
+  const d=allHistory.find(x=>x.id===id);if(!d)return;
+  if(facturaYaTieneNC(d)){toast('Esta factura ya tiene una NC emitida','e');return;}
+  toast('TODO: abrir modal Anular para '+d.numero,'w');
 }
 
 /* ═══════════════════════════════════════════════════
