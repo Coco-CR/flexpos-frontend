@@ -508,7 +508,7 @@ td.td-usr{font-size:11px;color:var(--purple);}
 .pgbtn:hover:not(:disabled){border-color:var(--teal);color:var(--teal);}
 .pgbtn:disabled{opacity:.3;cursor:default;}
 .pgbtn.on{background:var(--tdim);border-color:rgba(0,229,176,.4);color:var(--teal);}
-/* Price calculator in modal */
+/* Price calculator in  */
 .pricebox{background:var(--surf2);border:1px solid var(--border2);border-radius:var(--rl);padding:14px 16px;margin-bottom:14px;}
 .pricebox-title{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;}
 .mode-tabs{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:3px;margin-bottom:13px;}
@@ -1381,6 +1381,39 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     <button class="btn btn-o" onclick="dlHistXML()">⬇ XML</button>
     <button class="btn btn-p" onclick="dlHistPDF()">⬇ PDF</button>
     <button class="btn btn-o" onclick="makeNC()" id="hd-nc-btn">↩ Nota de Crédito</button>
+  </div>
+</div></div>
+   <!-- CORREGIR VENTA -->
+<div class="overlay" id="m-corregir"><div class="modal">
+  <div class="mh"><span class="mt">↩ Corregir venta</span><button class="mx" onclick="closeM('m-corregir')">✕</button></div>
+  <div class="cobrar-box">
+    <div class="cobrar-label">NC por</div>
+    <div class="cobrar-num">₡<span id="corregir-total">0</span></div>
+    <div class="cobrar-usd">contra factura <span id="corregir-num"></span></div>
+  </div>
+  <p style="font-size:12px;color:var(--text2);line-height:1.6;margin:0 0 14px;">Se emitirá una Nota de Crédito por el total de la factura. Los items volverán al carrito para que los edites y cobres una nueva venta.</p>
+  <div class="sdiv">Motivo (opcional)</div>
+  <textarea id="corregir-motivo" rows="2" placeholder="Ej: Error en cantidad" style="width:100%;padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:12px;resize:vertical;"></textarea>
+  <div class="mf">
+    <button class="btn btn-s" onclick="closeM('m-corregir')">Cancelar</button>
+    <button class="btn btn-o" id="corregir-confirmar" onclick="confirmarCorregir()">Emitir NC y corregir</button>
+  </div>
+</div></div>
+
+<!-- ANULAR VENTA -->
+<div class="overlay" id="m-anular"><div class="modal">
+  <div class="mh"><span class="mt">⚠ Anular venta</span><button class="mx" onclick="closeM('m-anular')">✕</button></div>
+  <div class="cobrar-box" style="border-color:rgba(255,80,80,.25);">
+    <div class="cobrar-label">NC por</div>
+    <div class="cobrar-num" style="color:var(--red);">₡<span id="anular-total">0</span></div>
+    <div class="cobrar-usd">contra factura <span id="anular-num"></span></div>
+  </div>
+  <p style="font-size:12px;color:var(--red);line-height:1.6;margin:0 0 14px;font-weight:600;">Esta acción no se puede deshacer. La factura quedará marcada como anulada en el historial.</p>
+  <div class="sdiv">Motivo (opcional)</div>
+  <textarea id="anular-motivo" rows="2" placeholder="Ej: Devolución del cliente" style="width:100%;padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:var(--font);font-size:12px;resize:vertical;"></textarea>
+  <div class="mf">
+    <button class="btn btn-s" onclick="closeM('m-anular')">Cancelar</button>
+    <button class="btn btn-d" id="anular-confirmar" onclick="confirmarAnular()">Emitir NC y anular</button>
   </div>
 </div></div>
 
@@ -2412,7 +2445,7 @@ function renderHist(){
           <button class="btn-hacienda" onclick="consultarHacienda('${d.id}')" title="Consultar estado en Hacienda CR">🏛 Hacienda</button>
           ${d.tipo!=='NC'?`
             <button class="btn btn-corregir btn-sm" onclick="iniciarCorregir('${d.id}')" ${anulada?'disabled':''} title="${anulada?'Esta factura ya tiene NC':'Emite NC y clona items al carrito para re-facturar'}">↩ Corregir</button>
-            <button class="btn btn-o btn-sm" onclick="iniciarAnular('${d.id}')" ${anulada?'disabled':''} title="${anulada?'Esta factura ya tiene NC':'Emite NC y deja el documento anulado'}">Anular</button>
+            <button class="btn btn-d btn-sm" onclick="iniciarAnular('${d.id}')" ${anulada?'disabled':''} title="${anulada?'Esta factura ya tiene NC':'Emite NC y deja el documento anulado'}">Anular</button>
           `:''}
           <button class="btn btn-s btn-sm" onclick="dlXML(allHistory.find(x=>x.id==='${d.id}'))">XML</button>
           <button class="btn btn-p btn-sm" onclick="dlPDF(allHistory.find(x=>x.id==='${d.id}'))">PDF</button>
@@ -2446,16 +2479,144 @@ function histNC(id){
   };
   setDoc('NC');go('pos');renderCart();toast('Nota de Crédito lista para confirmar','w');
 }
-   function iniciarCorregir(id){
+// Estado temporal del flujo en curso (qué doc se está corrigiendo/anulando)
+let _docEnOperacion=null;
+
+function iniciarCorregir(id){
   const d=allHistory.find(x=>x.id===id);if(!d)return;
   if(facturaYaTieneNC(d)){toast('Esta factura ya tiene una NC emitida','e');return;}
   if(carritoTieneItems()){toast('Vaciá el carrito antes de corregir una venta','e');return;}
-  toast('TODO: abrir modal Corregir para '+d.numero,'w');
+  _docEnOperacion=d;
+  document.getElementById('corregir-num').textContent=d.numero;
+  document.getElementById('corregir-total').textContent=fmt(d.total);
+  document.getElementById('corregir-motivo').value='';
+  openM('m-corregir');
 }
+
 function iniciarAnular(id){
   const d=allHistory.find(x=>x.id===id);if(!d)return;
   if(facturaYaTieneNC(d)){toast('Esta factura ya tiene una NC emitida','e');return;}
-  toast('TODO: abrir modal Anular para '+d.numero,'w');
+  _docEnOperacion=d;
+  document.getElementById('anular-num').textContent=d.numero;
+  document.getElementById('anular-total').textContent=fmt(d.total);
+  document.getElementById('anular-motivo').value='';
+  openM('m-anular');
+}
+
+async function confirmarCorregir(){
+  const d=_docEnOperacion;if(!d)return;
+  const motivo=document.getElementById('corregir-motivo').value.trim();
+  const btn=document.getElementById('corregir-confirmar');
+  btn.disabled=true;btn.textContent='Emitiendo NC…';
+
+  const nc=await anularDocumento(d,motivo);
+
+  btn.disabled=false;btn.textContent='Emitir NC y corregir';
+
+  if(!nc){
+    // anularDocumento ya mostró el toast de error
+    return;
+  }
+
+  // Clonar items al carrito y entrar en modo FE/TE según el original
+  clearCart();
+  d.items.forEach(i=>cart.push({...i}));
+  curClient=d.cliente?.tipoId!=='final'?d.cliente:null;
+  document.getElementById('cart-cli-name').value=curClient?.nombre||'';
+  setDoc(d.tipo);  // mismo tipo que el original (FE→FE, TE→TE)
+
+  closeM('m-corregir');
+  _docEnOperacion=null;
+  renderHist();   // refresca badge ANULADA en la fila
+  go('pos');
+  renderCart();
+  toast('NC emitida. Items cargados al carrito para re-facturar.','s');
+}
+
+async function confirmarAnular(){
+  const d=_docEnOperacion;if(!d)return;
+  const motivo=document.getElementById('anular-motivo').value.trim();
+  const btn=document.getElementById('anular-confirmar');
+  btn.disabled=true;btn.textContent='Emitiendo NC…';
+
+  const nc=await anularDocumento(d,motivo);
+
+  btn.disabled=false;btn.textContent='Emitir NC y anular';
+
+  if(!nc){
+    return;
+  }
+
+  closeM('m-anular');
+  _docEnOperacion=null;
+  renderHist();
+  toast('Factura anulada','s');
+}
+   /* ═══════════════════════════════════════════════════
+   NC — emisión (núcleo reusado por Corregir y Anular)
+═══════════════════════════════════════════════════ */
+async function anularDocumento(docOriginal, motivo){
+  if(!docOriginal)return null;
+  if(docOriginal.tipo==='NC'){toast('No se puede anular una NC','e');return null;}
+  if(facturaYaTieneNC(docOriginal)){toast('Esta factura ya tiene una NC emitida','e');return null;}
+
+  // Incrementar consecutivo NC y persistir (mismo patrón que openCobrar)
+  CONSEC.NC++;
+  lss('pos_consec',JSON.stringify(CONSEC));
+  const consec=String(CONSEC.NC).padStart(10,'0');
+  const now=new Date();
+  const numeroNC=buildConsec('NC',consec);
+  const claveNC=buildClave('NC',now,BIZ.cedula,consec);
+
+  const ncDoc={
+    id:        'doc_'+Date.now(),
+    tipo:      'NC',
+    numero:     numeroNC,
+    clave:      claveNC,
+    fecha:      now.toISOString(),
+    fechaStr:   now.toLocaleString('es-CR',{timeZone:'America/Costa_Rica'}),
+    cliente:    docOriginal.cliente,
+    items:      docOriginal.items.map(i=>({...i})),
+    sub:        docOriginal.sub,
+    disc:       docOriginal.disc,
+    iva:        docOriginal.iva,
+    total:      docOriginal.total,
+    afterAll:   docOriginal.afterAll,
+    moneda:     docOriginal.moneda,
+    tc:         docOriginal.tc,
+    payMethod:  docOriginal.payMethod,
+    obs:        motivo||'Anulación de documento',
+    ncRef:      docOriginal.numero,
+    globDisc:   docOriginal.globDisc,
+    status:    'emitida',
+    bizSnap:    docOriginal.bizSnap,
+    haciendaEstado:'pendiente',
+  };
+
+  // _ncRefData es lo que lee enviarAHacienda() para armar <InformacionReferencia>
+  window._ncRefData={
+    claveOriginal: docOriginal.clave,
+    tipoOriginal:  docOriginal.tipo,
+    fechaOriginal: docOriginal.fecha,
+    numeroOriginal:docOriginal.numero,
+  };
+
+  // Revertir stock (la NC "devuelve" los items al inventario)
+  if(typeof incrStock==='function'){
+    try{await incrStock(ncDoc.items);}catch(e){console.warn('[NC] incrStock falló',e);}
+  }
+
+  allHistory.unshift(ncDoc);
+  lss('pos_history',JSON.stringify(allHistory));
+  renderHist();
+
+  await enviarAHacienda(ncDoc);
+  lss('pos_history',JSON.stringify(allHistory));
+  renderHist();
+
+  const ncFinal=allHistory.find(x=>x.id===ncDoc.id);
+  if(ncFinal?.haciendaEstado==='rechazado')return null;
+  return ncFinal;
 }
 
 /* ═══════════════════════════════════════════════════
