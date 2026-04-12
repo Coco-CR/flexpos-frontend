@@ -2614,6 +2614,7 @@ async function anularDocumento(docOriginal, motivo){
   renderHist();
   const ncFinal=allHistory.find(x=>x.id===ncDoc.id);
   // Auto-consulta con backoff (mismo patrón que openCobrar)
+   console.log('[NC anular] estado tras enviar:', ncFinal?.haciendaEstado, 'id:', ncFinal?.id);
   if(ncFinal && (ncFinal.haciendaEstado||'').toLowerCase()==='pendiente'){
     scheduleAutoConsulta(ncFinal.id, 1);
   }
