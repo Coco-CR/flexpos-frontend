@@ -990,7 +990,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
         <div class="pos-left">
           <div class="pos-topbar">
             <div class="pos-row1">
-              <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar producto…" oninput="filterProds()"></div>
+              <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
               <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
             </div>
             <div class="doc-pills">
@@ -1979,9 +1979,23 @@ function pEmoji(n){
   return EMOJIS[Math.abs((n.charCodeAt(0)||0)*31+(n.charCodeAt(1)||0))%EMOJIS.length];
 }
 function filterProds(){renderProds((document.getElementById('pos-q')?.value||'').toLowerCase());}
+function scanBarcode(){
+  const input=document.getElementById('pos-q');
+  const code=(input?.value||'').trim();
+  if(!code)return;
+  const prod=allProds.find(p=>(p.codigo_barras||'')===code);
+  if(prod){
+    if(Number(prod.stock||0)<=0){toast('Producto agotado','w');return;}
+    addToCart(prod.id);
+    renderCart();
+    input.value='';
+    renderProds();
+    toast(prod.nombre+' agregado','s');
+  }
+}
 function renderProds(q=''){
   const g=document.getElementById('prod-grid');if(!g)return;
-  const show=allProds.filter(p=>!q||(p.nombre||'').toLowerCase().includes(q)||(p.cabys||'').includes(q));
+  const show=allProds.filter(p=>!q||(p.nombre||'').toLowerCase().includes(q)||(p.cabys||'').includes(q)||(p.codigo_barras||'').toLowerCase().includes(q));
   if(!show.length){g.innerHTML=`<div class="empty-st" style="grid-column:1/-1"><div class="es-ico">${allProds.length?'🔍':'📦'}</div><div class="es-title">${allProds.length?'Sin resultados':'Sin productos'}</div></div>`;return;}
   g.innerHTML=show.map(p=>{
     const s=Number(p.stock||0);
@@ -2670,7 +2684,7 @@ function filterInv(){
   const sf = document.getElementById('inv-sf')?.value||'all';
   const so = document.getElementById('inv-so')?.value||'nombre';
   filteredInv = allProds.filter(p=>{
-    const mq = !q||(p.nombre||'').toLowerCase().includes(q)||(p.cabys||'').includes(q);
+    const mq = !q||(p.nombre||'').toLowerCase().includes(q)||(p.cabys||'').includes(q)||(p.codigo_barras||'').toLowerCase().includes(q);
     const s  = Number(p.stock||0);
     const ms = sf==='all'?true:sf==='zero'?s===0:sf==='low'?s>0&&s<=5:s>5;
     return mq&&ms;
