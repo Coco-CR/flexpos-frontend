@@ -1478,6 +1478,10 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
       </select>
     </div>
   </div>
+   <div class="field">
+    <label>Código de barras</label>
+    <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
+  </div>
   <div class="sdiv">Precios</div>
   <div class="pricebox">
     <div class="pricebox-title">¿Cómo quieres ingresar el precio?</div>
@@ -2781,6 +2785,7 @@ function abrirModalProd(id){
   document.getElementById('pm-stock').value=p!=null?p.stock:'';
   document.getElementById('pm-cabys').value=p?.cabys||'';
   document.getElementById('pm-iva').value=p?.tarifa_iva||'13';
+  document.getElementById('pm-barcode').value=p?.codigo_barras||'';
   // Populate proveedores dropdown
   const provSel=document.getElementById('pm-proveedor');
   provSel.innerHTML='<option value="">— Sin proveedor —</option>'+
@@ -2859,6 +2864,7 @@ async function saveProd(){
   const cabys=document.getElementById('pm-cabys').value.trim();
   const tarifa_iva=document.getElementById('pm-iva').value||'13';
   const provId=document.getElementById('pm-proveedor').value||null;
+  const codigo_barras=document.getElementById('pm-barcode').value.trim()||null;
   if(!nombre)          return toast('El nombre es obligatorio','e');
   if(stock==='')       return toast('Ingresa el stock','e');
   if(!cabys)           return toast('El código CABYS es obligatorio','e');
@@ -2873,6 +2879,7 @@ async function saveProd(){
     tarifa_iva,
     proveedor_id: provId?Number(provId):null,
     cabys,
+    codigo_barras,
     actualizado_por: SB_USER,
   };
   const btn=document.getElementById('pm-save-btn');
