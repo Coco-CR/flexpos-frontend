@@ -2728,72 +2728,46 @@ function abrirModalProd(id){
   provSel.innerHTML='<option value="">— Sin proveedor —</option>'+
     allProveedores.map(v=>`<option value="${v.id}">${esc(v.nombre)}</option>`).join('');
   provSel.value=p?.proveedor_id||'';
-  // Reset calculadora
-  setPrecioModo('pct');
-  _pm_costo=0;_pm_util=0;_pm_venta=0;
-  ['pm-a-costo','pm-a-util','pm-b-costo','pm-b-venta'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
-  document.getElementById('pm-res-a').style.display='none';
-  document.getElementById('pm-res-b').style.display='none';
-  document.getElementById('pm-summary').style.display='none';
-  if(p&&(p.precio_costo>0||p.precio_venta>0)){
-    document.getElementById('pm-a-costo').value=p.precio_costo||'';
-    document.getElementById('pm-a-util').value=p.utilidad?Number(p.utilidad).toFixed(2):'';
-    document.getElementById('pm-b-costo').value=p.precio_costo||'';
-    document.getElementById('pm-b-venta').value=p.precio_venta||'';
-    _pm_costo=p.precio_costo;_pm_util=p.utilidad;_pm_venta=p.precio_venta;
-    pmMostrarSummary();
-    if(p.precio_costo>0){
-      document.getElementById('pm-ra-venta').textContent='₡'+fmt(p.precio_venta);
-      document.getElementById('pm-ra-gan').textContent='(+₡'+fmt(p.precio_venta-p.precio_costo)+')';
-      document.getElementById('pm-res-a').style.display='flex';
-    }
-  }
-  openM('m-prod');
+// Reset
+_pm_costo = 0; _pm_util = 0; _pm_venta = 0;
+document.getElementById('pm-costo').value = '';
+document.getElementById('pm-venta').value = '';
+document.getElementById('pm-summary').style.display = 'none';
+
+if(p && (p.precio_costo > 0 || p.precio_venta > 0)){
+  document.getElementById('pm-costo').value = p.precio_costo || '';
+  document.getElementById('pm-venta').value = p.precio_venta || '';
+  pmRecalc();
+}  openM('m-prod');
   setTimeout(()=>document.getElementById('pm-nombre').focus(),80);
 }
 
-function setPrecioModo(m){
-  _pm_modo=m;
-  document.getElementById('pm-tab-pct').classList.toggle('on',m==='pct');
-  document.getElementById('pm-tab-manual').classList.toggle('on',m==='manual');
-  document.getElementById('pm-modo-pct').style.display=m==='pct'?'block':'none';
-  document.getElementById('pm-modo-manual').style.display=m==='manual'?'block':'none';
-}
-function precioCalcA(){
-  const costo=Number(document.getElementById('pm-a-costo').value||0);
-  const pct=Number(document.getElementById('pm-a-util').value||0);
-  if(costo<=0){document.getElementById('pm-res-a').style.display='none';return;}
-  const venta=Math.round(costo*(1+pct/100));
-  const gan=venta-costo;
-  document.getElementById('pm-ra-venta').textContent='₡'+fmt(venta);
-  document.getElementById('pm-ra-gan').textContent='(+₡'+fmt(gan)+')';
-  document.getElementById('pm-res-a').style.display='flex';
-  _pm_costo=costo;_pm_util=pct;_pm_venta=venta;
-  pmMostrarSummary();
-  document.getElementById('pm-b-costo').value=costo||'';
-  document.getElementById('pm-b-venta').value=venta||'';
-}
-function precioCalcB(){
-  const costo=Number(document.getElementById('pm-b-costo').value||0);
-  const venta=Number(document.getElementById('pm-b-venta').value||0);
-  if(costo<=0||venta<=0){document.getElementById('pm-res-b').style.display='none';return;}
-  const pct=((venta-costo)/costo)*100;
-  const gan=venta-costo;
-  document.getElementById('pm-rb-util').textContent=pct.toFixed(2)+'%';
-  document.getElementById('pm-rb-gan').textContent='(+₡'+fmt(gan)+')';
-  document.getElementById('pm-res-b').style.display='flex';
-  _pm_costo=costo;_pm_util=pct;_pm_venta=venta;
-  pmMostrarSummary();
-  document.getElementById('pm-a-costo').value=costo||'';
-  document.getElementById('pm-a-util').value=pct.toFixed(2);
-}
-function pmMostrarSummary(){
-  document.getElementById('pm-sb-costo').textContent='₡'+fmt(_pm_costo);
-  document.getElementById('pm-sb-util').textContent=_pm_util.toFixed(2)+'%';
-  document.getElementById('pm-sb-venta').textContent='₡'+fmt(_pm_venta);
-  document.getElementById('pm-summary').style.display='block';
-}
+function pmRecalc(){
+  const costo = Number(document.getElementById('pm-costo').value || 0);
+  const venta = Number(document.getElementById('pm-venta').value || 0);
+  const tarifaStr = document.getElementById('pm-iva').value || '13';
+  const tarifa = parseFloat(tarifaStr) || 0;
 
+  _pm_costo = costo;
+  _pm_venta = venta;
+
+  if(costo > 0 && venta > 0){
+    const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
+    const ivaMonto = venta - base;
+    const util = costo > 0 ? ((venta - costo) / costo) * 100 : 0;
+    _pm_util = util;
+
+    document.getElementById('pm-sb-costo').textContent = '₡' + fmt(costo);
+    document.getElementById('pm-sb-base').textContent  = '₡' + fmt(Math.round(base));
+    document.getElementById('pm-sb-iva').textContent   = '₡' + fmt(Math.round(ivaMonto));
+    document.getElementById('pm-sb-util').textContent  = (util >= 0 ? '+' : '') + util.toFixed(1) + '%';
+    document.getElementById('pm-sb-venta').textContent = '₡' + fmt(venta);
+    document.getElementById('pm-summary').style.display = 'block';
+  } else {
+    document.getElementById('pm-summary').style.display = 'none';
+    _pm_util = 0;
+  }
+}
 async function saveProd(){
   const id=document.getElementById('prod-id').value;
   const nombre=document.getElementById('pm-nombre').value.trim();
@@ -2802,11 +2776,17 @@ async function saveProd(){
   const tarifa_iva=document.getElementById('pm-iva').value||'13';
   const provId=document.getElementById('pm-proveedor').value||null;
   const codigo_barras=document.getElementById('pm-barcode').value.trim()||null;
+
+  // ── NUEVO: leer precios de los inputs simplificados ──
+  _pm_costo = Number(document.getElementById('pm-costo').value || 0);
+  _pm_venta = Number(document.getElementById('pm-venta').value || 0);
+  if(_pm_costo > 0 && _pm_venta > 0) pmRecalc(); // actualiza _pm_util
+
   if(!nombre)          return toast('El nombre es obligatorio','e');
   if(stock==='')       return toast('Ingresa el stock','e');
   if(!cabys)           return toast('El código CABYS es obligatorio','e');
   if(cabys.length!==13)return toast('CABYS debe tener exactamente 13 dígitos','e');
-  if(_pm_venta<=0)     return toast('Calcula el precio de venta primero','e');
+  if(_pm_venta<=0)     return toast('Ingresa el precio de venta','e');
   if(_pm_costo<=0)     return toast('Ingresa el precio de costo','e');
   const cuerpo={
     nombre, stock:Number(stock),
