@@ -1435,7 +1435,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   </div>
 </div></div>
 
-<!-- PRODUCTO MODAL v3 -->
+<!-- PRODUCTO MODAL v4 -->
 <div class="overlay" id="m-prod">
 <div class="modal">
   <div class="mh">
@@ -1444,6 +1444,10 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   </div>
   <input type="hidden" id="prod-id">
   <div class="sdiv">Información general</div>
+  <div class="field">
+    <label>Código de barras</label>
+    <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
+  </div>
   <div class="field">
     <label>Nombre / Descripción *</label>
     <input type="text" id="pm-nombre" placeholder="Ej: Arroz blanco 1kg">
@@ -1462,77 +1466,9 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <div class="frow2">
     <div class="field">
       <label>Tarifa IVA *</label>
-      <select id="pm-iva">
+      <select id="pm-iva" onchange="pmRecalc()">
         <option value="13">13% — Tarifa general</option>
-        <option value="4">4% — Salud (medicamentos, equipos médicos)</option>
-        <option value="2">2% — Canasta básica ampliada</option>
-        <option value="1">1% — Canasta básica restringida</option>
-        <option value="0">0% — Exento</option>
-        <option value="0e">No sujeto</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>Proveedor</label>
-      <select id="pm-proveedor">
-        <option value="">— Sin proveedor —</option>
-      </select>
-    </div>
-  </div>
-   <div class="field">
-    <label>Código de barras</label>
-    <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
-  </div>
-  <div class="sdiv">Precios</div>
-  <div class="pricebox">
-    <div class="pricebox-title">¿Cómo quieres ingresar el precio?</div>
-    <div class="mode-tabs">
-      <button class="mtab on" id="pm-tab-pct"    onclick="setPrecioModo('pct')">Costo + % Utilidad → calcula P. Venta</button>
-      <button class="mtab"    id="pm-tab-manual" onclick="setPrecioModo('manual')">Costo + P. Venta → calcula % Utilidad</button>
-    </div>
-    <!-- Modo A -->
-    <div id="pm-modo-pct">
-      <div class="frow2">
-        <div class="field"><label>Precio de Costo ₡ *</label>
-          <input type="number" id="pm-a-costo" placeholder="0" min="0" step="1" oninput="precioCalcA()"></div>
-        <div class="field"><label>Utilidad % *</label>
-          <input type="number" id="pm-a-util" placeholder="0" min="0" step="0.5" oninput="precioCalcA()"></div>
-      </div>
-      <div class="result-row" id="pm-res-a" style="display:none;">
-        <span class="rr-label">Precio de venta calculado:</span>
-        <span><span class="rr-val" id="pm-ra-venta">₡0</span><span class="rr-extra" id="pm-ra-gan"></span></span>
-      </div>
-    </div>
-    <!-- Modo B -->
-    <div id="pm-modo-manual" style="display:none;">
-      <div class="frow2">
-        <div class="field"><label>Precio de Costo ₡ *</label>
-          <input type="number" id="pm-b-costo" placeholder="0" min="0" step="1" oninput="precioCalcB()"></div>
-        <div class="field"><label>Precio de Venta ₡ *</label>
-          <input type="number" id="pm-b-venta" placeholder="0" min="0" step="1" oninput="precioCalcB()"></div>
-      </div>
-      <div class="result-row" id="pm-res-b" style="display:none;">
-        <span class="rr-label">Utilidad calculada:</span>
-        <span><span class="rr-val" id="pm-rb-util">0%</span><span class="rr-extra" id="pm-rb-gan"></span></span>
-      </div>
-    </div>
-  </div>
-  <!-- Resumen -->
-  <div class="summary-box" id="pm-summary" style="display:none;">
-    <div class="sb-title">Resumen de precios</div>
-    <div class="sb-grid">
-      <div class="sb-item"><label>Precio Costo</label><div class="sbv c" id="pm-sb-costo">₡0</div></div>
-      <div class="sb-item"><label>Utilidad</label><div class="sbv u" id="pm-sb-util">0%</div></div>
-      <div class="sb-item"><label>Precio Venta</label><div class="sbv v" id="pm-sb-venta">₡0</div></div>
-    </div>
-  </div>
-  <div class="info-box">💡 El <b>precio de venta</b> es el que aparece en facturas y en el POS. Costo y utilidad solo son visibles en inventario.</div>
-  <div class="mf">
-    <button class="btn btn-s" onclick="closeM('m-prod')">Cancelar</button>
-    <button class="btn btn-p" id="pm-save-btn" onclick="saveProd()">Guardar producto</button>
-  </div>
-</div>
-</div>
-
+        <option value="4">4% — Salud (
 <!-- IMPORTAR INVENTARIO CSV -->
 <div class="overlay" id="m-csv-inv"><div class="modal">
   <div class="mh">
