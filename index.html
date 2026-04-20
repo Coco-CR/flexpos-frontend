@@ -1468,8 +1468,49 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
       <label>Tarifa IVA *</label>
       <select id="pm-iva" onchange="pmRecalc()">
         <option value="13">13% — Tarifa general</option>
-        <option value="4">4% — Salud (
-<!-- IMPORTAR INVENTARIO CSV -->
+        <option value="4">4% — Salud (medicamentos, equipos médicos)</option>
+        <option value="2">2% — Canasta básica ampliada</option>
+        <option value="1">1% — Canasta básica restringida</option>
+        <option value="0">0% — Exento</option>
+        <option value="0e">No sujeto</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Proveedor</label>
+      <select id="pm-proveedor">
+        <option value="">— Sin proveedor —</option>
+      </select>
+    </div>
+  </div>
+  <div class="sdiv">Precios</div>
+  <div class="pricebox">
+    <div class="frow2">
+      <div class="field">
+        <label>Precio de Costo ₡ *</label>
+        <input type="number" id="pm-costo" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      </div>
+      <div class="field">
+        <label>Precio de Venta ₡ * <span style="font-weight:400;font-size:11px;color:var(--text3)">(IVA incluido)</span></label>
+        <input type="number" id="pm-venta" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      </div>
+    </div>
+    <div class="summary-box" id="pm-summary" style="display:none;">
+      <div class="sb-grid">
+        <div class="sb-item"><label>Precio Costo</label><div class="sbv c" id="pm-sb-costo">₡0</div></div>
+        <div class="sb-item"><label>Base sin IVA</label><div class="sbv u" id="pm-sb-base">₡0</div></div>
+        <div class="sb-item"><label>IVA</label><div class="sbv u" id="pm-sb-iva">₡0</div></div>
+        <div class="sb-item"><label>Utilidad</label><div class="sbv u" id="pm-sb-util">0%</div></div>
+        <div class="sb-item"><label>Precio Venta</label><div class="sbv v" id="pm-sb-venta">₡0</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="info-box">💡 El <b>precio de venta incluye IVA</b>. Es el precio final al público. Al facturar, el sistema extrae la base imponible automáticamente.</div>
+  <div class="mf">
+    <button class="btn btn-s" onclick="closeM('m-prod')">Cancelar</button>
+    <button class="btn btn-p" id="pm-save-btn" onclick="saveProd()">Guardar producto</button>
+  </div>
+</div>
+</div><!-- IMPORTAR INVENTARIO CSV -->
 <div class="overlay" id="m-csv-inv"><div class="modal">
   <div class="mh">
     <span class="mt">⬆ Importar Inventario desde CSV</span>
