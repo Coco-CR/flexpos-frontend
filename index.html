@@ -2084,39 +2084,38 @@ function renderCart(){
   updateTotals();
 }
 function calcTotals(){
-  // Calcular por tarifa de IVA para desglose correcto (Hacienda CR)
   const ivaRates={'13':0.13,'4':0.04,'2':0.02,'1':0.01,'0':0,'0e':0};
   let sub=0, lineDisc=0;
-  const ivaByRate={};
   cart.forEach(i=>{
-    const b=i.precio*i.qty;
+    const rate=i.tarifa_iva||'13';
+    const r=ivaRates[rate]||0;
+    // precio ya incluye IVA → extraer base
+    const baseUnit=r>0?i.precio/(1+r):i.precio;
+    const b=baseUnit*i.qty;
     const d=Math.round(b*(i.discPct||0)/100);
     sub+=b; lineDisc+=d;
-    const net=b-d;
-    const rate=i.tarifa_iva||'13';
-    const ivaAmt=Math.round(net*(ivaRates[rate]||0));
-    ivaByRate[rate]=(ivaByRate[rate]||0)+ivaAmt;
   });
   const afterLine=sub-lineDisc;
   const gd=Math.round(afterLine*globDisc.pct/100);
   const afterAll=afterLine-gd;
-  // Recalcular IVA sobre base con descuento global
   const gdPct=globDisc.pct/100;
   let totalIva=0;
   const ivaDesgloseAdj={};
   cart.forEach(i=>{
-    const b=i.precio*i.qty;
+    const rate=i.tarifa_iva||'13';
+    const r=ivaRates[rate]||0;
+    const baseUnit=r>0?i.precio/(1+r):i.precio;
+    const b=baseUnit*i.qty;
     const d=Math.round(b*(i.discPct||0)/100);
     const net=(b-d)*(1-gdPct);
-    const rate=i.tarifa_iva||'13';
-    const ivaAmt=Math.round(net*(ivaRates[rate]||0));
+    const ivaAmt=Math.round(net*r);
     ivaDesgloseAdj[rate]=(ivaDesgloseAdj[rate]||0)+ivaAmt;
     totalIva+=ivaAmt;
   });
+  // total = afterAll (base neta) + IVA = precio de venta original
   const total=afterAll+totalIva;
-  return{sub, disc:lineDisc+gd, gd, afterAll, iva:totalIva, ivaDesglose:ivaDesgloseAdj, total};
+  return{sub,disc:lineDisc+gd,gd,afterAll,iva:totalIva,ivaDesglose:ivaDesgloseAdj,total};
 }
-
 function updateTotals(){
   const{sub,disc,iva,ivaDesglose,total}=calcTotals();
   document.getElementById('t-sub').textContent='₡'+fmt(sub);
