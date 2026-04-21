@@ -1253,8 +1253,12 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <label>Actividades económicas (CIIU 4) *</label>
   <div id="cfg-actividades-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
   <div style="display:flex;gap:6px">
-    <input id="cfg-act-codigo" type="text" placeholder="Código (ej: 4711)" maxlength="10" style="width:120px">
+    <input id="cfg-act-codigo" type="text" placeholder="Código (ej: 4711.2)" maxlength="10" style="width:120px">
+  </div>
+   <div style="display:flex;gap:6px">
     <input id="cfg-act-desc" type="text" placeholder="Descripción (opcional)" style="flex:1">
+  </div>
+  <div style="display:flex;gap:6px">
     <button class="btn btn-s" onclick="cfgAgregarActividad()">+ Agregar</button>
   </div>
 </div>
