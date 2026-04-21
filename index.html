@@ -1368,7 +1368,11 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     <div class="field"><label>Monto recibido (<span id="ef-cur">₡</span>)</label><input type="number" id="monto-rec" placeholder="0" min="0" oninput="calcVuelto()"></div>
     <div class="vuelto-box" id="vuelto-box"><div class="vb-label">Vuelto</div><div class="vb-num" id="vuelto-num">₡0</div></div>
   </div>
-  <div class="field"><label>Observaciones</label><textarea id="cobrar-obs" rows="2" placeholder="Notas opcionales…"></textarea></div>
+  <div id="wrap-selector-actividad" style="display:none" class="field">
+  <label>Actividad económica</label>
+  <select id="sel-actividad" style="width:100%;font-size:13px;padding:6px 8px;border:1px solid #ccc;border-radius:6px"></select>
+</div>
+<div class="field"><label>Observaciones</label><textarea id="cobrar-obs" rows="2" placeholder="Notas opcionales…"></textarea></div>
   <div class="mf">
     <button class="btn btn-s" onclick="closeM('m-cobrar')">Cancelar</button>
     <button class="btn btn-p" style="background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff;" onclick="procesarPago()">✅ Confirmar</button>
@@ -2144,7 +2148,21 @@ function applyDisc(){
   updateTotals();closeM('m-disc');if(pct>0)toast('Descuento '+pct+'% aplicado','s');
 }
 function rmGlobDisc(){globDisc={pct:0,nature:'01'};document.getElementById('gd-row').classList.remove('on');updateTotals();}
-
+function renderSelectorActividad() {
+  const wrap = document.getElementById('wrap-selector-actividad');
+  const sel  = document.getElementById('sel-actividad');
+  if (!wrap || !sel) return;
+  if (BIZ.actividades.length <= 1) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  sel.innerHTML = '';
+  BIZ.actividades.forEach(act => {
+    const opt = document.createElement('option');
+    opt.value = act.codigo;
+    opt.textContent = act.codigo + (act.descripcion ? ' — ' + act.descripcion : '');
+    if (act.principal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
 /* ═══════════════════════════════════════════════════
    CLIENTS IN CART
 ═══════════════════════════════════════════════════ */
@@ -2189,6 +2207,7 @@ function openCobrar(){
   document.getElementById('vuelto-box').classList.remove('on');
   document.getElementById('ef-fields').style.display=payMethod==='efectivo'?'block':'none';
   document.getElementById('cobrar-obs').value='';
+  renderSelectorActividad();
   openM('m-cobrar');
 }
 function calcVuelto(){
@@ -2225,7 +2244,12 @@ async function procesarPago(){
     items:cart.map(i=>({...i})),
     sub,disc,iva,total,afterAll,
     moneda:currency,tc:TC,payMethod,obs,ncRef:docType==='NC'?ncRef:'',
-    globDisc:{...globDisc},status:'emitida',bizSnap:{...BIZ},xml:'',
+    globDisc:{...globDisc},status:'emitida',bizSnap:{
+  ...BIZ,
+  codigoActividad: BIZ.actividades.length > 1
+    ? (document.getElementById('sel-actividad')?.value || getActividadPrincipal().codigo)
+    : getActividadPrincipal().codigo,
+},xml:'',
   };
   // doc.xml se llenará después con el XML firmado que regrese del backend
   if(docType!=='NC')await decrStock(doc.items);else await incrStock(doc.items);
