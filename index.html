@@ -3890,11 +3890,16 @@ function renderReportes(){
   const semana=allHistory.filter(d=>{const f=new Date(d.fecha);const n=new Date();return(n-f)<7*86400000&&d.tipo!=='NC';});
   const totalHoy=hoy.reduce((s,d)=>s+d.total,0);
   const totalSem=semana.reduce((s,d)=>s+d.total,0);
+  const vc=allProds.reduce((s,p)=>s+p.precio_costo*p.stock,0);
+  const vv=allProds.reduce((s,p)=>s+p.precio_venta*p.stock,0);
   document.getElementById('rep-kpis').innerHTML=`
     <div class="kpi teal"><div class="kpi-label">Ventas hoy</div><div class="kpi-val">₡${fmt(totalHoy)}</div><div class="kpi-sub">${hoy.length} documentos</div></div>
     <div class="kpi blu"><div class="kpi-label">Esta semana</div><div class="kpi-val">₡${fmt(totalSem)}</div><div class="kpi-sub">${semana.length} documentos</div></div>
     <div class="kpi ora"><div class="kpi-label">Total documentos</div><div class="kpi-val">${allHistory.length}</div><div class="kpi-sub">en historial</div></div>
-    <div class="kpi yel"><div class="kpi-label">Notas de Crédito</div><div class="kpi-val">${allHistory.filter(d=>d.tipo==='NC').length}</div><div class="kpi-sub">emitidas</div></div>`;
+    <div class="kpi yel"><div class="kpi-label">Notas de Crédito</div><div class="kpi-val">${allHistory.filter(d=>d.tipo==='NC').length}</div><div class="kpi-sub">emitidas</div></div>
+    <div class="kpi ora"><div class="kpi-label">Valor a costo</div><div class="kpi-val">₡${fmt(vc)}</div><div class="kpi-sub">inventario actual</div></div>
+    <div class="kpi grn"><div class="kpi-label">Valor a venta</div><div class="kpi-val">₡${fmt(vv)}</div><div class="kpi-sub">inventario actual</div></div>
+    <div class="kpi grn"><div class="kpi-label">Ganancia potencial</div><div class="kpi-val">₡${fmt(vv-vc)}</div><div class="kpi-sub">si se vende todo</div></div>`;
   // Últimas ventas
   const rec=allHistory.filter(d=>d.tipo!=='NC').slice(0,8);
   document.getElementById('rep-recientes').innerHTML=rec.length?rec.map(d=>`
