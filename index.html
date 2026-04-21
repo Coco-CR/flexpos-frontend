@@ -2084,17 +2084,24 @@ function scanBarcode(){
 function renderProds(q=''){
   const dd=document.getElementById('prod-dropdown');
   if(!dd)return;
-  if(!q){dd.classList.remove('on');dd.innerHTML='';return;}
-  const show=allProds.filter(p=>
-    (p.nombre||'').toLowerCase().includes(q.toLowerCase())||
-    (p.cabys||'').includes(q)||
-    (p.codigo_barras||'').toLowerCase().includes(q.toLowerCase())
-  );
+  
+  let show;
+  if(!q){
+    show=allProds;
+  } else {
+    show=allProds.filter(p=>
+      (p.nombre||'').toLowerCase().includes(q.toLowerCase())||
+      (p.cabys||'').includes(q)||
+      (p.codigo_barras||'').toLowerCase().includes(q.toLowerCase())
+    );
+  }
+  
   if(!show.length){
     dd.innerHTML='<div style="padding:16px;text-align:center;color:#999;font-size:13px;">Sin resultados</div>';
     dd.classList.add('on');
     return;
   }
+  
   dd.innerHTML=show.slice(0,20).map(p=>{
     const s=Number(p.stock||0);
     const pC=Number(p.precio_venta||0);
