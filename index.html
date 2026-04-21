@@ -2739,15 +2739,10 @@ function renderInvPage(){
 
 function updateInvKPIs(){
   const t  =allProds.length;
-  const vc =allProds.reduce((s,p)=>s+p.precio_costo*p.stock,0);
-  const vv =allProds.reduce((s,p)=>s+p.precio_venta*p.stock,0);
   const lo =allProds.filter(p=>p.stock>0&&p.stock<=5).length;
   const ze =allProds.filter(p=>p.stock===0).length;
   document.getElementById('inv-kpis').innerHTML=`
     <div class="kpi teal"><div class="kpi-label">Productos</div><div class="kpi-val">${t}</div></div>
-    <div class="kpi ora"><div class="kpi-label">Valor a costo</div><div class="kpi-val">₡${fmt(vc)}</div></div>
-    <div class="kpi grn"><div class="kpi-label">Valor a venta</div><div class="kpi-val">₡${fmt(vv)}</div></div>
-    <div class="kpi grn"><div class="kpi-label">Ganancia potencial</div><div class="kpi-val">₡${fmt(vv-vc)}</div></div>
     <div class="kpi yel"><div class="kpi-label">Stock bajo</div><div class="kpi-val">${lo}</div></div>
     <div class="kpi red"><div class="kpi-label">Agotados</div><div class="kpi-val">${ze}</div></div>`;
 }
