@@ -3618,52 +3618,7 @@ async function enviarAHacienda(doc){
     console.error('[Hacienda]',e);
   }
 }
-   function cfgRenderActividades() {
-  const lista = document.getElementById('cfg-actividades-lista');
-  if (!lista) return;
-  lista.innerHTML = '';
-  BIZ.actividades.forEach((act, i) => {
-    const fila = document.createElement('div');
-    fila.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 10px;border:0.5px solid var(--color-border-tertiary,#ddd);border-radius:6px;font-size:13px';
-    fila.innerHTML = `
-      <span style="font-weight:500;min-width:55px">${act.codigo}</span>
-      <span style="flex:1;color:#777">${act.descripcion || '—'}</span>
-      ${act.principal
-        ? `<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#e6f4ea;color:#1a6e35">principal</span>`
-        : `<button class="btn btn-s" style="font-size:11px;padding:2px 8px" onclick="cfgMarcarPrincipal(${i})">marcar principal</button>`}
-      <button onclick="cfgBorrarActividad(${i})" style="font-size:12px;color:#999;background:none;border:none;cursor:pointer;padding:0 4px" title="Borrar">✕</button>
-    `;
-    lista.appendChild(fila);
-  });
-}
-
-function cfgAgregarActividad() {
-  const codigo = document.getElementById('cfg-act-codigo').value.trim();
-  const desc   = document.getElementById('cfg-act-desc').value.trim();
-  if (!codigo) return toast('Ingresá el código CIIU', 'w');
-  if (BIZ.actividades.find(a => a.codigo === codigo)) return toast('Esa actividad ya existe', 'w');
-  BIZ.actividades.push({ codigo, descripcion: desc, principal: false });
-  saveActividades();
-  document.getElementById('cfg-act-codigo').value = '';
-  document.getElementById('cfg-act-desc').value = '';
-  cfgRenderActividades();
-}
-
-function cfgMarcarPrincipal(idx) {
-  BIZ.actividades.forEach((a, i) => a.principal = (i === idx));
-  saveActividades();
-  cfgRenderActividades();
-}
-
-function cfgBorrarActividad(idx) {
-  if (BIZ.actividades.length === 1) return toast('Debe haber al menos una actividad', 'w');
-  const eraPrincipal = BIZ.actividades[idx].principal;
-  BIZ.actividades.splice(idx, 1);
-  if (eraPrincipal) BIZ.actividades[0].principal = true;
-  saveActividades();
-  cfgRenderActividades();
-}
-
+   
 /* ═══════════════════════════════════════════════════
    CONSULTAR ESTADO HACIENDA CR
 ═══════════════════════════════════════════════════ */
@@ -4074,7 +4029,7 @@ function loadCfg(){
   document.getElementById('cfg-biz-nombre').value=BIZ.nombre;
   document.getElementById('cfg-biz-ced').value=BIZ.cedula;
   document.getElementById('cfg-biz-tipo-id').value=BIZ.tipoId||'01';
-  document.getElementById('cfg-biz-ciiu').value=BIZ.ciiu;
+  cfgRenderActividades();
   document.getElementById('cfg-biz-email').value=BIZ.email;
   document.getElementById('cfg-biz-tel').value=BIZ.tel;
   document.getElementById('cfg-biz-dir').value=BIZ.dir;
@@ -4115,7 +4070,49 @@ function saveBiz(){
   Object.entries(BIZ).forEach(([k,v])=>lss('biz_'+k,v));
   toast('Datos del negocio guardados','s');
 }
-   function saveTerminal(){
+  function cfgRenderActividades(){
+  const lista=document.getElementById('cfg-actividades-lista');
+  if(!lista)return;
+  lista.innerHTML='';
+  BIZ.actividades.forEach((act,i)=>{
+    const fila=document.createElement('div');
+    fila.style.cssText='display:flex;align-items:center;gap:8px;padding:6px 10px;border:0.5px solid #ddd;border-radius:6px;font-size:13px';
+    fila.innerHTML=`
+      <span style="font-weight:500;min-width:55px">${act.codigo}</span>
+      <span style="flex:1;color:#777">${act.descripcion||'—'}</span>
+      ${act.principal
+        ?`<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#e6f4ea;color:#1a6e35">principal</span>`
+        :`<button class="btn btn-s" style="font-size:11px;padding:2px 8px" onclick="cfgMarcarPrincipal(${i})">marcar principal</button>`}
+      <button onclick="cfgBorrarActividad(${i})" style="font-size:12px;color:#999;background:none;border:none;cursor:pointer;padding:0 4px">✕</button>
+    `;
+    lista.appendChild(fila);
+  });
+}
+function cfgAgregarActividad(){
+  const codigo=document.getElementById('cfg-act-codigo').value.trim();
+  const desc=document.getElementById('cfg-act-desc').value.trim();
+  if(!codigo)return toast('Ingresá el código CIIU','w');
+  if(BIZ.actividades.find(a=>a.codigo===codigo))return toast('Esa actividad ya existe','w');
+  BIZ.actividades.push({codigo,descripcion:desc,principal:false});
+  saveActividades();
+  document.getElementById('cfg-act-codigo').value='';
+  document.getElementById('cfg-act-desc').value='';
+  cfgRenderActividades();
+}
+function cfgMarcarPrincipal(idx){
+  BIZ.actividades.forEach((a,i)=>a.principal=(i===idx));
+  saveActividades();
+  cfgRenderActividades();
+}
+function cfgBorrarActividad(idx){
+  if(BIZ.actividades.length===1)return toast('Debe haber al menos una actividad','w');
+  const eraPrincipal=BIZ.actividades[idx].principal;
+  BIZ.actividades.splice(idx,1);
+  if(eraPrincipal)BIZ.actividades[0].principal=true;
+  saveActividades();
+  cfgRenderActividades();
+}   
+  function saveTerminal(){
   const suc=document.getElementById('cfg-sucursal').value.trim().replace(/\D/g,'');
   const term=document.getElementById('cfg-terminal').value.trim().replace(/\D/g,'');
   if(suc.length!==3)return toast('Sucursal debe ser 3 dígitos','e');
