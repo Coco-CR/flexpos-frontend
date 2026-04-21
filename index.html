@@ -1694,7 +1694,7 @@ let BACKEND_URL = ls('backend_url')||'', BACKEND_KEY = ls('backend_key')||'';
 let TC    = Number(ls('tipo_cambio'))||650;
 let CONSEC= JSON.parse(ls('pos_consec')||'{"FE":0,"TE":0,"NC":0}');
 let allProds=[], allClients=[], allProveedores=[], allHistory=JSON.parse(ls('pos_history')||'[]');
-let cart=[], curClient=null, docType='FE', payMethod='efectivo', currency='CRC';
+let cart=[], curClient=null, docType='TE', payMethod='efectivo', currency='CRC';
 let globDisc={pct:0,nature:'01'};
 let filteredProds=[], filteredInv=[], filteredCli=[];
 let invPage=1; const INV_PG=20;
