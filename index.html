@@ -2322,6 +2322,7 @@ async function procesarPago(){
       console.warn('[Hacienda] Error enviando:',e.message);
     });
   }
+  clearCart();
   showTicket(doc);closeM('m-cobrar');updateDash();
 }
 
