@@ -2126,36 +2126,47 @@ function renderCart(){
 }
 function calcTotals(){
   const ivaRates={'13':0.13,'4':0.04,'2':0.02,'1':0.01,'0':0,'0e':0};
-  let sub=0, lineDisc=0;
-  cart.forEach(i=>{
-    const rate=i.tarifa_iva||'13';
-    const r=ivaRates[rate]||0;
-    // precio ya incluye IVA → extraer base
-    const baseUnit=r>0?i.precio/(1+r):i.precio;
-    const b=baseUnit*i.qty;
-    const d=Math.round(b*(i.discPct||0)/100);
-    sub+=b; lineDisc+=d;
-  });
-  const afterLine=sub-lineDisc;
-  const gd=Math.round(afterLine*globDisc.pct/100);
-  const afterAll=afterLine-gd;
   const gdPct=globDisc.pct/100;
-  let totalIva=0;
+  let totalConIva=0, lineDiscTotal=0, totalIva=0, totalBase=0;
   const ivaDesgloseAdj={};
+
   cart.forEach(i=>{
     const rate=i.tarifa_iva||'13';
     const r=ivaRates[rate]||0;
-    const baseUnit=r>0?i.precio/(1+r):i.precio;
-    const b=baseUnit*i.qty;
-    const d=Math.round(b*(i.discPct||0)/100);
-    const net=(b-d)*(1-gdPct);
-    const ivaAmt=Math.round(net*r);
-    ivaDesgloseAdj[rate]=(ivaDesgloseAdj[rate]||0)+ivaAmt;
-    totalIva+=ivaAmt;
+    // precio de venta (con IVA incluido) por cantidad
+    const brutoLinea = i.precio * i.qty;
+    // descuento de línea sobre el bruto con IVA
+    const discLinea = Math.round(brutoLinea * (i.discPct||0)/100);
+    // neto de línea después de descuento de línea y global
+    const netoLineaConIva = (brutoLinea - discLinea) * (1 - gdPct);
+    // base e IVA de la línea (para desglose)
+    const baseLinea = r > 0 ? netoLineaConIva/(1+r) : netoLineaConIva;
+    const ivaLinea  = netoLineaConIva - baseLinea;
+
+    totalConIva   += brutoLinea;
+    lineDiscTotal += discLinea;
+    totalIva      += ivaLinea;
+    totalBase     += baseLinea;
+    ivaDesgloseAdj[rate] = (ivaDesgloseAdj[rate]||0) + ivaLinea;
   });
-  // total = afterAll (base neta) + IVA = precio de venta original
-  const total=afterAll+totalIva;
-  return{sub,disc:lineDisc+gd,gd,afterAll,iva:totalIva,ivaDesglose:ivaDesgloseAdj,total};
+
+  const afterLine = totalConIva - lineDiscTotal;
+  const gd = Math.round(afterLine * gdPct);
+  // El total es simplemente precio × qty menos descuentos — sin reconstruir desde base
+  const total = Math.round(afterLine - gd);
+
+  // Redondear los valores de display a enteros
+  return {
+    sub:       Math.round(totalConIva),
+    disc:      lineDiscTotal + gd,
+    gd,
+    afterAll:  Math.round(totalBase * (1 - gdPct)),
+    iva:       Math.round(totalIva * (1 - gdPct)),
+    ivaDesglose: Object.fromEntries(
+      Object.entries(ivaDesgloseAdj).map(([k,v]) => [k, Math.round(v * (1 - gdPct))])
+    ),
+    total
+  };
 }
 function updateTotals(){
   const{sub,disc,iva,ivaDesglose,total}=calcTotals();
