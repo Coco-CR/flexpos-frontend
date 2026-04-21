@@ -402,6 +402,20 @@ textarea{resize:vertical;min-height:70px;}
 }
 .qbtn:hover{border-color:var(--teal);color:var(--teal);}
 .qn{font-family:var(--mono);font-size:16px;font-weight:700;min-width:24px;text-align:center;}
+.qn-input{
+  width:60px;
+  text-align:center;
+  font-size:13px;
+  font-weight:500;
+  padding:4px 6px;
+  border:1px solid #ccc;
+  border-radius:6px;
+  background:transparent;
+  color:inherit;
+}
+.qn-input::-webkit-inner-spin-button,
+.qn-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.qn-input[type=number]{-moz-appearance:textfield}
 .ci-rm{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:3px 5px;transition:color .12s;}
 .ci-rm:hover{color:var(--red);}
 .ci-sub{font-size:12px;color:var(--text3);}
@@ -2085,6 +2099,15 @@ function changeQty(id,d){
   else if(prod&&item.qty>Number(prod.stock||0)){item.qty--;toast('Stock insuficiente','w');}
   renderCart();
 }
+function setQty(id,v){
+  const item=cart.find(x=>x.id===id);if(!item)return;
+  const prod=allProds.find(x=>x.id===id);
+  const nuevaQty=Number(v)||0;
+  if(nuevaQty<=0){cart=cart.filter(x=>x.id!==id);renderCart();return;}
+  if(prod&&nuevaQty>Number(prod.stock||0)){toast('Stock insuficiente','w');return;}
+  item.qty=nuevaQty;
+  renderCart();
+}
 function setLineDisc(id,v){const item=cart.find(x=>x.id===id);if(item){item.discPct=Math.min(100,Math.max(0,Number(v)||0));updateTotals();}}
 function clearCart(){
   cart=[];globDisc={pct:0,nature:'01'};curClient=null;
@@ -2113,7 +2136,7 @@ function renderCart(){
       <div class="ci-tot">₡${fmt(net)}</div>
       <div class="ci-ctrl">
         <button class="qbtn" onclick="changeQty(${item.id},-1)">−</button>
-        <span class="qn">${item.qty}</span>
+        <<input type="number" class="qn-input" value="${item.qty}" min="0" step="0.001" onchange="setQty(${item.id},this.value)" onclick="this.select()">
         <button class="qbtn" onclick="changeQty(${item.id},1)">+</button>
         <button class="ci-rm" onclick="removeFromCart(${item.id})">✕</button>
       </div>
