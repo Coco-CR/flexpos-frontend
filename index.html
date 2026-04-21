@@ -1698,11 +1698,36 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
    STATE
 ═══════════════════════════════════════════════════ */
 let SB_URL   = ls('sb_url')||'', SB_KEY=ls('sb_key')||'', SB_TABLE=ls('sb_table')||'inventario', SB_USER=ls('sb_user')||'admin';
-let BIZ = { nombre:ls('biz_nombre')||'Mi Negocio S.A.', cedula:ls('biz_cedula')||ls('biz_ced')||'',
-  tipoId:ls('biz_tipoId')||ls('biz_tipo_id')||'01',
-  ciiu:ls('biz_ciiu')||'4711', email:ls('biz_email')||'facturacion@negocio.cr',
-  tel:ls('biz_tel')||'22001234', dir:ls('biz_dir')||'San José, Costa Rica' };
-let TERM = {
+let BIZ = {
+  nombre:  ls('biz_nombre') || 'Mi Negocio S.A.',
+  cedula:  ls('biz_cedula') || ls('biz_ced') || '',
+  tipoId:  ls('biz_tipoId') || ls('biz_tipo_id') || '01',
+  ciiu:    ls('biz_ciiu') || '4711',
+  email:   ls('biz_email') || 'facturacion@negocio.cr',
+  tel:     ls('biz_tel') || '22001234',
+  dir:     ls('biz_dir') || 'San José, Costa Rica',
+  actividades: [],
+};
+
+(function migrarActividades(){
+  const raw = ls('biz_actividades');
+  if(raw){
+    try { BIZ.actividades = JSON.parse(raw); } catch(e) { BIZ.actividades = []; }
+  }
+  if(!BIZ.actividades.length){
+    const codigoViejo = BIZ.ciiu || '4711';
+    BIZ.actividades = [{ codigo: codigoViejo, descripcion: '', principal: true }];
+    localStorage.setItem('biz_actividades', JSON.stringify(BIZ.actividades));
+  }
+})();
+
+function getActividadPrincipal(){
+  return BIZ.actividades.find(a => a.principal) || BIZ.actividades[0] || { codigo: '4711', descripcion: '' };
+}
+
+function saveActividades(){
+  localStorage.setItem('biz_actividades', JSON.stringify(BIZ.actividades));
+}let TERM = {
   sucursal: ls('term_sucursal') || '001',
   terminal: ls('term_terminal') || '00002',
 };
