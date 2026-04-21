@@ -1055,6 +1055,11 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
             <div class="pos-row1">
               <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
               <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
+               <div class="pos-row1">
+                    <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onfocus="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
+                    <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
+                    <div class="prod-dropdown" id="prod-dropdown"></div>
+               </div>
             </div>
             <div class="doc-pills">
               <button class="pill p-fe on" id="pill-fe" onclick="setDoc('FE')">📄 Factura Electrónica</button>
