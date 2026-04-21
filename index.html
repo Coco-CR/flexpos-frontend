@@ -1869,12 +1869,12 @@ async function loadProds(){
   if(SB_URL&&SB_KEY){
     try{
       // inventario_vista incluye proveedor_nombre via LEFT JOIN
-      const d=await sbFetch(`${SB_URL}/rest/v1/inventario_vista?select=*&order=nombre.asc`);
+      const d=await sbFetch(`${SB_URL}/rest/v1/inventario_vista?select=*&order=nombre.asc`,{headers:{'Range-Unit':'items','Range':'0-9999'}});
       allProds=(d||[]).map(normalizeRow);
     }catch(e){
       // Fallback a tabla directa si la vista no existe aún
       try{
-        const d=await sbFetch(sbUrl('?select=*&order=nombre.asc'));
+        const d=await sbFetch(sbUrl('?select=*&order=nombre.asc'),{headers:{'Range-Unit':'items','Range':'0-9999'}});
         allProds=(d||[]).map(normalizeRow);
       }catch(e2){toast('Error cargando inventario: '+e2.message,'e');}
     }
