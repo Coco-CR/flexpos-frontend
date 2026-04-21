@@ -468,20 +468,24 @@ textarea{resize:vertical;min-height:70px;}
 .btn-cobrar.nc{background:linear-gradient(135deg,var(--orange),var(--yellow));}
 .btn-limpiar{
   width:100%;
-  padding:16px;
-  font-size:15px;
-  font-weight:600;
-  background:#FFC107;
-  color:#000;
-  border:none;
-  border-radius:8px;
+  padding:12px;
+  font-size:14px;
+  font-weight:500;
+  background:#000;
+  color:#FFC107;
+  border:1.5px solid #FFC107;
+  border-radius:var(--rl);
   cursor:pointer;
   margin-top:8px;
-  transition:background 0.2s;
+  transition:all 0.2s;
+  font-family:var(--font);
 }
-.btn-limpiar:hover{background:#FFD54F;}
+.btn-limpiar:hover{
+  background:#1a1a1a;
+  border-color:#FFD54F;
+  color:#FFD54F;
+}
 .btn-limpiar:active{transform:scale(0.98);}
-.btn-limpiar:hover{border-color:var(--red);color:var(--red);}
 
 /* ═══════════════════════════════════════════
    INVENTARIO v3
