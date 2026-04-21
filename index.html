@@ -1249,7 +1249,15 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
               </select>
             </div>
             <div class="field"><label>Número de cédula / identificación *</label><input type="text" id="cfg-biz-ced" placeholder="Sin guiones, ej: 101230345"></div>
-            <div class="field"><label>Código CIIU *</label><input type="text" id="cfg-biz-ciiu" placeholder="4711"></div>
+            <div class="field">
+  <label>Actividades económicas (CIIU 4) *</label>
+  <div id="cfg-actividades-lista" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px"></div>
+  <div style="display:flex;gap:6px">
+    <input id="cfg-act-codigo" type="text" placeholder="Código (ej: 4711)" maxlength="10" style="width:120px">
+    <input id="cfg-act-desc" type="text" placeholder="Descripción (opcional)" style="flex:1">
+    <button class="btn btn-s" onclick="cfgAgregarActividad()">+ Agregar</button>
+  </div>
+</div>
           </div>
           <div class="frow">
             <div class="field"><label>Correo electrónico *</label><input type="email" id="cfg-biz-email" placeholder="facturacion@negocio.cr"></div>
@@ -1854,7 +1862,7 @@ function go(name){
     renderCierreHistorial();
   }
   if(name==='usuarios')renderUsuarios();
-  if(name==='config'){loadCfg();loadLogoInCfg();}
+  if(name==='config'){loadCfg();loadLogoInCfg();cfgRenderActividades();}
   if(name==='inventario'){filterInv();}
 }
 
@@ -4051,7 +4059,7 @@ function saveBiz(){
   BIZ.nombre=document.getElementById('cfg-biz-nombre').value.trim();
   BIZ.cedula=document.getElementById('cfg-biz-ced').value.trim().replace(/\D/g,'');
   BIZ.tipoId=document.getElementById('cfg-biz-tipo-id').value;
-  BIZ.ciiu=document.getElementById('cfg-biz-ciiu').value.trim();
+  BIZ.ciiu = getActividadPrincipal().codigo;
   BIZ.email=document.getElementById('cfg-biz-email').value.trim();
   BIZ.tel=document.getElementById('cfg-biz-tel').value.trim();
   BIZ.dir=document.getElementById('cfg-biz-dir').value.trim();
