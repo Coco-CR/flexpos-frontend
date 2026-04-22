@@ -1088,11 +1088,12 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
                 <button class="pill p-te" id="pill-te" onclick="setDoc('TE')">🧾 Tiquete</button>
                 <button class="pill p-nc" id="pill-nc" onclick="setDoc('NC')">↩ Nota de Crédito</button>
               </div>
-              <div class="pos-row1">
-                <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onfocus="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
-                <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
-                <div class="prod-dropdown" id="prod-dropdown"></div>
-              </div>
+                <div class="pos-row1">
+                 <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onfocus="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
+                 <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
+                 <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
+                 <div class="prod-dropdown" id="prod-dropdown"></div>
+               </div>
             </div>
           </div>
           <div class="cart-body" id="cart-body"><div class="cart-empty"><div class="ce-icon">🛒</div><div style="font-size:16px;font-weight:600;">Toca un producto para agregarlo</div></div></div>
