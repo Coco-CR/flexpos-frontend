@@ -1105,7 +1105,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
                 <button class="pill p-nc" id="pill-nc" onclick="setDoc('NC')">↩ Nota de Crédito</button>
               </div>
                 <div class="pos-row1">
-                 <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
+                 <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();if(document.getElementById('pos-q').value.trim())scanBarcode();else openCobrar();}"</div>
                  <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
                  <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
                  <div class="prod-dropdown" id="prod-dropdown"></div>
@@ -1490,7 +1490,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <div class="mh"><span class="mt" id="cobrar-title">💳 Procesar Pago</span><button class="mx" onclick="closeM('m-cobrar')">✕</button></div>
   <div class="cobrar-box"><div class="cobrar-label">Total a cobrar</div><div class="cobrar-num" id="cb-num">₡0</div><div class="cobrar-usd" id="cb-usd">$0.00 USD</div></div>
   <div id="ef-fields">
-    <div class="field"><label>Monto recibido (<span id="ef-cur">₡</span>)</label><input type="number" id="monto-rec" placeholder="0" min="0" oninput="calcVuelto()"></div>
+    <div class="field"><label>Monto recibido (<span id="ef-cur">₡</span>)</label><input type="number" id="monto-rec" placeholder="0" min="0" oninput="calcVuelto()" onkeydown="if(event.key==='Enter'){event.preventDefault();procesarPago();}"></div>
     <div class="vuelto-box" id="vuelto-box"><div class="vb-label">Vuelto</div><div class="vb-num" id="vuelto-num">₡0</div></div>
   </div>
   <div id="wrap-selector-actividad" style="display:none" class="field">
@@ -2435,6 +2435,9 @@ function openCobrar(){
   document.getElementById('cobrar-obs').value='';
   renderSelectorActividad();
   openM('m-cobrar');
+  setTimeout(()=>{
+    if(payMethod==='efectivo')document.getElementById('monto-rec')?.focus();
+  },80);
 }
 function calcVuelto(){
   const{total}=calcTotals();
@@ -2566,6 +2569,7 @@ function showTicket(doc){
   document.getElementById('ticket-title').textContent={FE:'🧾 Factura Electrónica',TE:'🏷 Tiquete',NC:'↩ Nota de Crédito'}[doc.tipo]||'Documento';
   document.getElementById('ticket-content').textContent=buildTicketText(doc);
   window._currDoc=doc;openM('m-ticket');
+  setTimeout(()=>closeM('m-ticket'),10000);
 }
 
 /* ═══════════════════════════════════════════════════
