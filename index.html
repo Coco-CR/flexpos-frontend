@@ -2218,7 +2218,6 @@ function setPay(m){
   document.getElementById('ef-fields').style.display=m==='efectivo'?'block':'none';
 }
 function addToCart(id){
-  function addToCart(id){
   const p=allProds.find(x=>x.id===id);if(!p)return;
   const ex=cart.find(x=>x.id===id);
   if(ex){if(ex.qty>=Number(p.stock||0)){toast('Stock insuficiente','w');return;}ex.qty++;}
