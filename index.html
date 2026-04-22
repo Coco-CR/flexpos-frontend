@@ -4631,15 +4631,13 @@ async function pmCabysBuscar(q){
     }
   } catch(e){ console.warn('RPC error:', e); }
 
-  // Fuente 2: catálogo oficial — búsqueda por LIKE (más simple y confiable)
+ // Fuente 2: catálogo oficial
   if(sugs.length < 3){
     try {
-      const palabras = norm.split(' ').filter(p=>p.length>2);
-      if(palabras.length > 0){
-        // Buscar con ilike en descripcion_normalizada
-        const filtro = palabras.map(p=>`descripcion_normalizada=ilike.*${p}*`).join('&');
+      const primera = norm.split(' ').filter(p=>p.length>2)[0];
+      if(primera){
         const r = await sbFetch(
-          `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&${filtro}&limit=5`,
+          `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&descripcion_normalizada=ilike.*${encodeURIComponent(primera)}*&limit=6`,
           {}
         );
         if(r && r.length){
@@ -4657,7 +4655,6 @@ async function pmCabysBuscar(q){
       }
     } catch(e){ console.warn('Catálogo error:', e); }
   }
-
   sugs.sort((a,b) => b.score - a.score);
 
   if(!sugs.length){
