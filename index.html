@@ -4615,7 +4615,7 @@ async function pmCabysBuscar(q){
 
   let sugs = [];
 
-  // Fuente 1: evidencia de facturas recibidas
+  // Fuente 1: facturas recibidas
   try {
     const r = await sbFetch(
       `${SB_URL}/rest/v1/rpc/buscar_cabys_por_descripcion`,
@@ -4625,37 +4625,40 @@ async function pmCabysBuscar(q){
       sugs = r.map(x => ({
         codigo: x.cabys,
         descripcion: x.descripcion_evidencia || q,
-        fuente: `📦 ${x.n_facturas} factura${x.n_facturas>1?'s':''} · ${Math.round(x.similitud*100)}% similitud`,
+        fuente: `📦 ${x.n_facturas} fact · ${Math.round(x.similitud*100)}%`,
         score: x.similitud + 1
       }));
     }
   } catch(e){ console.warn('RPC error:', e); }
 
- // Fuente 2: catálogo oficial
-  if(sugs.length < 3){
-    try {
-      const primera = norm.split(' ').filter(p=>p.length>2)[0];
-      if(primera){
-        const r = await sbFetch(
-          `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&descripcion_normalizada=ilike.*${encodeURIComponent(primera)}*&limit=6`,
-          {}
-        );
-        if(r && r.length){
-          r.forEach(x => {
-            if(!sugs.find(s => s.codigo === x.codigo)){
-              sugs.push({
-                codigo: x.codigo,
-                descripcion: x.descripcion,
-                fuente: '📋 Catálogo CABYS',
-                score: 0.5
-              });
-            }
-          });
-        }
+  // Fuente 2: catálogo oficial — SIEMPRE complementar
+  try {
+    const palabras = norm.split(' ').filter(p=>p.length>2);
+    if(palabras.length > 0){
+      // Construir filtro: la descripción debe contener TODAS las palabras
+      // PostgREST: usamos and() para combinar múltiples ilike sobre el mismo campo
+      const conds = palabras.map(p=>`descripcion_normalizada.ilike.*${p}*`).join(',');
+      const r = await sbFetch(
+        `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&and=(${conds})&limit=5`,
+        {}
+      );
+      if(r && r.length){
+        r.forEach(x => {
+          if(!sugs.find(s => s.codigo === x.codigo)){
+            sugs.push({
+              codigo: x.codigo,
+              descripcion: x.descripcion,
+              fuente: '📋 Catálogo',
+              score: 0.6
+            });
+          }
+        });
       }
-    } catch(e){ console.warn('Catálogo error:', e); }
-  }
+    }
+  } catch(e){ console.warn('Catálogo error:', e); }
+
   sugs.sort((a,b) => b.score - a.score);
+  sugs = sugs.slice(0, 8);
 
   if(!sugs.length){
     document.getElementById('pm-cabys-status').textContent = '⚠ Sin sugerencias. Ingresá el CABYS manualmente.';
@@ -4665,8 +4668,7 @@ async function pmCabysBuscar(q){
 
   pmCabysMostrarSugs(sugs);
   document.getElementById('pm-cabys-status').textContent = '';
-}
-function pmCabysMostrarSugs(sugs){
+}function pmCabysMostrarSugs(sugs){
   const box = document.getElementById('pm-cabys-sugs');
   box.innerHTML = sugs.map((s,i) => `
     <div onclick="pmCabysElegir('${s.codigo}')"
