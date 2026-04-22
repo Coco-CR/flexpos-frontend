@@ -1579,18 +1579,25 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   </div>
   <div class="field">
     <label>Nombre / Descripción *</label>
-    <input type="text" id="pm-nombre" placeholder="Ej: Arroz blanco 1kg">
+    <input type="text" id="pm-nombre" placeholder="Ej: Arroz blanco 1kg" oninput="pmNombreInput()">
   </div>
   <div class="frow2">
     <div class="field">
       <label>Stock (unidades) *</label>
       <input type="number" id="pm-stock" placeholder="0" min="0" step="1">
     </div>
-    <div class="field">
+<div class="field" style="position:relative">
       <label>Código CABYS * (13 dígitos)</label>
       <input type="text" id="pm-cabys" placeholder="2110100000000" maxlength="13"
-             oninput="this.value=this.value.replace(/\D/g,'')">
-    </div>
+             oninput="this.value=this.value.replace(/\D/g,'');pmCabysManual()"
+             autocomplete="off">
+      <div id="pm-cabys-sugs" style="
+        display:none;position:absolute;z-index:999;left:0;right:0;top:100%;
+        background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+        box-shadow:0 8px 24px #0006;max-height:260px;overflow-y:auto;margin-top:4px">
+      </div>
+      <div id="pm-cabys-status" style="font-size:11px;color:var(--text3);margin-top:4px;min-height:16px"></div>
+   </div>
   </div>
   <div class="frow2">
     <div class="field">
@@ -1639,7 +1646,8 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     <button class="btn btn-p" id="pm-save-btn" onclick="saveProd()">Guardar producto</button>
   </div>
 </div>
-</div><!-- IMPORTAR INVENTARIO CSV -->
+</div>
+<!-- IMPORTAR INVENTARIO CSV -->
 <div class="overlay" id="m-csv-inv"><div class="modal">
   <div class="mh">
     <span class="mt">⬆ Importar Inventario desde CSV</span>
@@ -4571,6 +4579,125 @@ document.addEventListener('click',function(e){
   const input=document.getElementById('pos-q');
   if(dd&&input&&!dd.contains(e.target)&&e.target!==input){
     dd.classList.remove('on');
+  }
+});
+/* ── Buscador CABYS ── */
+let _cabysTimer = null;
+
+// Se llama cuando cambia pm-nombre
+function pmNombreInput(){
+  clearTimeout(_cabysTimer);
+  const q = document.getElementById('pm-nombre').value.trim();
+  const cabysInput = document.getElementById('pm-cabys');
+  // Solo buscar si CABYS está vacío y el nombre tiene al menos 3 chars
+  if(cabysInput.value.length === 13) return; // ya tiene uno manual
+  if(q.length < 3){ pmCabysOcultarSugs(); return; }
+  document.getElementById('pm-cabys-status').textContent = '🔍 Buscando…';
+  _cabysTimer = setTimeout(() => pmCabysBuscar(q), 400);
+}
+
+// Llamado cuando el usuario escribe en pm-cabys manualmente
+function pmCabysManual(){
+  const v = document.getElementById('pm-cabys').value;
+  if(v.length === 13){
+    pmCabysOcultarSugs();
+    document.getElementById('pm-cabys-status').textContent = '✓ CABYS ingresado manualmente';
+  } else {
+    document.getElementById('pm-cabys-status').textContent = '';
+  }
+}
+
+async function pmCabysBuscar(q){
+  const norm = q.toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ').trim();
+
+  let sugs = [];
+
+  // Fuente 1: evidencia de facturas recibidas (xmlExtractor)
+  try {
+    const r = await sbFetch(
+      `${SB_URL}/rest/v1/rpc/buscar_cabys_por_descripcion`,
+      { method:'POST', body: JSON.stringify({ p_descripcion: norm, p_limit: 5 }) }
+    );
+    if(r && r.length){
+      sugs = r.map(x => ({
+        codigo: x.cabys,
+        descripcion: x.descripcion_evidencia || norm,
+        fuente: `📦 ${x.n_facturas} factura${x.n_facturas>1?'s':''} · ${Math.round(x.similitud*100)}% similitud`,
+        score: x.similitud + 1 // prioridad sobre catálogo
+      }));
+    }
+  } catch(e){ /* continuar con catálogo */ }
+
+  // Fuente 2: catálogo oficial CABYS (fallback o complemento)
+  if(sugs.length < 3){
+    try {
+      const palabras = norm.split(' ').filter(p=>p.length>2);
+      const tsquery = palabras.join(' & ');
+      const r = await sbFetch(
+        `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&` +
+        `descripcion_normalizada=fts.${encodeURIComponent(tsquery)}&limit=5`,
+        {}
+      );
+      if(r && r.length){
+        r.forEach(x => {
+          if(!sugs.find(s => s.codigo === x.codigo)){
+            sugs.push({
+              codigo: x.codigo,
+              descripcion: x.descripcion,
+              fuente: '📋 Catálogo CABYS',
+              score: 0.5
+            });
+          }
+        });
+      }
+    } catch(e){ /* sin catálogo */ }
+  }
+
+  sugs.sort((a,b) => b.score - a.score);
+
+  if(!sugs.length){
+    document.getElementById('pm-cabys-status').textContent = '⚠ Sin sugerencias. Ingresá el CABYS manualmente.';
+    pmCabysOcultarSugs();
+    return;
+  }
+
+  pmCabysMostrarSugs(sugs);
+  document.getElementById('pm-cabys-status').textContent = '';
+}
+
+function pmCabysMostrarSugs(sugs){
+  const box = document.getElementById('pm-cabys-sugs');
+  box.innerHTML = sugs.map((s,i) => `
+    <div onclick="pmCabysElegir('${s.codigo}')"
+         style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+                transition:background .15s"
+         onmouseover="this.style.background='var(--bg3)'"
+         onmouseout="this.style.background=''">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <span style="font-family:monospace;font-size:13px;color:var(--teal);font-weight:600">${s.codigo}</span>
+        <span style="font-size:10px;color:var(--text3);white-space:nowrap">${s.fuente}</span>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;line-height:1.3">${esc(s.descripcion)}</div>
+    </div>`).join('');
+  box.style.display = 'block';
+}
+
+function pmCabysElegir(codigo){
+  document.getElementById('pm-cabys').value = codigo;
+  document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
+  pmCabysOcultarSugs();
+}
+
+function pmCabysOcultarSugs(){
+  document.getElementById('pm-cabys-sugs').style.display = 'none';
+}
+
+// Cerrar sugerencias al hacer click fuera
+document.addEventListener('click', e => {
+  if(!e.target.closest('#pm-cabys-sugs') && e.target.id !== 'pm-cabys'){
+    pmCabysOcultarSugs();
   }
 });
 setDoc('TE');
