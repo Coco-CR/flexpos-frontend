@@ -485,6 +485,22 @@ textarea{resize:vertical;min-height:70px;}
   border-color:var(--text3);
 }
 .btn-limpiar:active{transform:scale(0.98);}
+@keyframes flashGreen{
+  0%{background:transparent;}
+  30%{background:var(--tglow);}
+  100%{background:transparent;}
+}
+.cart-item.flash{
+  animation:flashGreen .5s ease;
+}
+.cart-cnt.pulse{
+  animation:pulseBadge .35s ease;
+}
+@keyframes pulseBadge{
+  0%{transform:scale(1);}
+  50%{transform:scale(1.25);}
+  100%{transform:scale(1);}
+}
 /* ═══════════════════════════════════════════
    INVENTARIO v3
 ═══════════════════════════════════════════ */
@@ -1089,7 +1105,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
                 <button class="pill p-nc" id="pill-nc" onclick="setDoc('NC')">↩ Nota de Crédito</button>
               </div>
                 <div class="pos-row1">
-                 <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onfocus="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
+                 <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="if(event.key==='Enter'){event.preventDefault();scanBarcode();}"></div>
                  <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
                  <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
                  <div class="prod-dropdown" id="prod-dropdown"></div>
@@ -2119,17 +2135,18 @@ function renderProds(q=''){
   const dd=document.getElementById('prod-dropdown');
   if(!dd)return;
   
-  let show;
-  if(!q){
-    show=allProds;
-  } else {
-    show=allProds.filter(p=>
+ let show;
+  if(!q || q.length<2){
+    dd.classList.remove('on');
+    dd.innerHTML='';
+    return;
+  }
+  show=allProds.filter(p=>
       (p.nombre||'').toLowerCase().includes(q.toLowerCase())||
       (p.cabys||'').includes(q)||
       (p.codigo_barras||'').toLowerCase().includes(q.toLowerCase())
     );
-  }
-  
+   
   if(!show.length){
     dd.innerHTML='<div style="padding:16px;text-align:center;color:#999;font-size:13px;">Sin resultados</div>';
     dd.classList.add('on');
@@ -2140,7 +2157,7 @@ function renderProds(q=''){
     const s=Number(p.stock||0);
     const pC=Number(p.precio_venta||0);
     const disabled=s===0?'style="opacity:0.5;cursor:not-allowed;"':'';
-    return`<div class="prod-item" ${disabled} onclick="${s>0?`addToCart(${p.id});document.getElementById('pos-q').value='';renderProds('');`:''}"">
+    return`<div class="prod-item" ${disabled} onclick="${s>0?`addToCart(${p.id});document.getElementById('pos-q').value='';renderProds('');document.getElementById('pos-q').focus();`:''}"">
       <div class="prod-name">${esc(p.nombre)} ${s===0?'<span style="color:#e74c3c;font-size:11px;">(agotado)</span>':s<=5?`<span style="color:#f39c12;font-size:11px;">(${s})</span>`:''}</div>
       <div class="prod-price">₡${fmt(pC)}</div>
       <button class="prod-edit" onclick="event.stopPropagation();abrirModalProd(${p.id})">✏ Editar</button>
@@ -2190,6 +2207,20 @@ function addToCart(id){
     qty:1, discPct:0, discNat:'01'
   });
   renderCart();
+  // Feedback visual: flash en la fila y pulso en el contador
+  setTimeout(()=>{
+    const rows=document.querySelectorAll('#cart-body .cart-item');
+    const idx=cart.findIndex(x=>x.id===id);
+    if(rows[idx]){
+      rows[idx].classList.add('flash');
+      setTimeout(()=>rows[idx]?.classList.remove('flash'),500);
+    }
+    const cnt=document.getElementById('cart-cnt');
+    if(cnt){
+      cnt.classList.add('pulse');
+      setTimeout(()=>cnt.classList.remove('pulse'),350);
+    }
+  },20);
 }
 function removeFromCart(id){cart=cart.filter(x=>x.id!==id);renderCart();}
 function changeQty(id,d){
