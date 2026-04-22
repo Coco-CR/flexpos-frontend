@@ -2000,7 +2000,7 @@ function go(name){
   document.querySelectorAll('.tnav').forEach(n=>n.classList.remove('on'));
   const pg=document.getElementById('p-'+name);if(pg)pg.classList.add('on');
   const tn=document.querySelector(`[data-p="${name}"]`);if(tn)tn.classList.add('on');
-  if(name==='pos')renderProds();
+  if(name==='pos'){renderProds();setTimeout(()=>document.getElementById('pos-q')?.focus(),80);}
   if(name==='clientes'){loadClientsFromDB();}
   if(name==='historial')renderHist();
   if(name==='reportes')renderReportes();
@@ -2137,9 +2137,23 @@ function scanBarcode(){
     input.value='';
     renderProds();
     toast(prod.nombre+' agregado','s');
+  } else {
+    // Codigo no encontrado en inventario — pito de alerta
+    try{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type='square';
+      osc.frequency.setValueAtTime(440,ctx.currentTime);
+      gain.gain.setValueAtTime(0.3,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime+0.4);
+    }catch(e){ console.warn('Audio error:',e); }
+    toast('Codigo no encontrado en inventario','e');
   }
-}
-function renderProds(q=''){
+}function renderProds(q=''){
   const dd=document.getElementById('prod-dropdown');
   if(!dd)return;
   
@@ -2204,23 +2218,8 @@ function setPay(m){
   document.getElementById('ef-fields').style.display=m==='efectivo'?'block':'none';
 }
 function addToCart(id){
-  const p=allProds.find(x=>x.id===id);
-  if(!p){
-    // Producto no encontrado — pito de alerta
-    try{
-      const ctx=new (window.AudioContext||window.webkitAudioContext)();
-      const osc=ctx.createOscillator();
-      const gain=ctx.createGain();
-      osc.connect(gain);gain.connect(ctx.destination);
-      osc.type='square';
-      osc.frequency.setValueAtTime(440,ctx.currentTime);
-      gain.gain.setValueAtTime(0.3,ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime+0.4);
-    }catch(e){}
-    return;
-  }
+  function addToCart(id){
+  const p=allProds.find(x=>x.id===id);if(!p)return;
   const ex=cart.find(x=>x.id===id);
   if(ex){if(ex.qty>=Number(p.stock||0)){toast('Stock insuficiente','w');return;}ex.qty++;}
   else cart.push({
@@ -2270,6 +2269,7 @@ function clearCart(){
   document.getElementById('cart-cli-name').value='';
   document.getElementById('cart-cli-name').placeholder='Consumidor Final ✓';
   document.getElementById('gd-row').classList.remove('on');renderCart();
+  document.getElementById('pos-q')?.focus();
 }
 function renderCart(){
   const body=document.getElementById('cart-body');
