@@ -1574,12 +1574,12 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <input type="hidden" id="prod-id">
   <div class="sdiv">Información general</div>
   <div class="field">
-    <label>Código de barras</label>
-    <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
-  </div>
-  <div class="field">
     <label>Nombre / Descripción *</label>
     <input type="text" id="pm-nombre" placeholder="Ej: Arroz blanco 1kg" oninput="pmNombreInput()">
+  </div>
+  <div class="field">
+    <label>Código de barras</label>
+    <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
   </div>
   <div class="frow2">
     <div class="field">
@@ -2204,7 +2204,23 @@ function setPay(m){
   document.getElementById('ef-fields').style.display=m==='efectivo'?'block':'none';
 }
 function addToCart(id){
-  const p=allProds.find(x=>x.id===id);if(!p)return;
+  const p=allProds.find(x=>x.id===id);
+  if(!p){
+    // Producto no encontrado — pito de alerta
+    try{
+      const ctx=new (window.AudioContext||window.webkitAudioContext)();
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain);gain.connect(ctx.destination);
+      osc.type='square';
+      osc.frequency.setValueAtTime(440,ctx.currentTime);
+      gain.gain.setValueAtTime(0.3,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime+0.4);
+    }catch(e){}
+    return;
+  }
   const ex=cart.find(x=>x.id===id);
   if(ex){if(ex.qty>=Number(p.stock||0)){toast('Stock insuficiente','w');return;}ex.qty++;}
   else cart.push({
