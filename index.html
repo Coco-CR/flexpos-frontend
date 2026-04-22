@@ -4610,11 +4610,12 @@ function pmCabysManual(){
 async function pmCabysBuscar(q){
   const norm = q.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9\s]/g,'')
     .replace(/\s+/g,' ').trim();
 
   let sugs = [];
 
-  // Fuente 1: evidencia de facturas recibidas (xmlExtractor)
+  // Fuente 1: evidencia de facturas recibidas
   try {
     const r = await sbFetch(
       `${SB_URL}/rest/v1/rpc/buscar_cabys_por_descripcion`,
@@ -4623,36 +4624,38 @@ async function pmCabysBuscar(q){
     if(r && r.length){
       sugs = r.map(x => ({
         codigo: x.cabys,
-        descripcion: x.descripcion_evidencia || norm,
+        descripcion: x.descripcion_evidencia || q,
         fuente: `📦 ${x.n_facturas} factura${x.n_facturas>1?'s':''} · ${Math.round(x.similitud*100)}% similitud`,
-        score: x.similitud + 1 // prioridad sobre catálogo
+        score: x.similitud + 1
       }));
     }
-  } catch(e){ /* continuar con catálogo */ }
+  } catch(e){ console.warn('RPC error:', e); }
 
-  // Fuente 2: catálogo oficial CABYS (fallback o complemento)
+  // Fuente 2: catálogo oficial — búsqueda por LIKE (más simple y confiable)
   if(sugs.length < 3){
     try {
       const palabras = norm.split(' ').filter(p=>p.length>2);
-      const tsquery = palabras.join(' & ');
-      const r = await sbFetch(
-        `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&` +
-        `descripcion_normalizada=fts.${encodeURIComponent(tsquery)}&limit=5`,
-        {}
-      );
-      if(r && r.length){
-        r.forEach(x => {
-          if(!sugs.find(s => s.codigo === x.codigo)){
-            sugs.push({
-              codigo: x.codigo,
-              descripcion: x.descripcion,
-              fuente: '📋 Catálogo CABYS',
-              score: 0.5
-            });
-          }
-        });
+      if(palabras.length > 0){
+        // Buscar con ilike en descripcion_normalizada
+        const filtro = palabras.map(p=>`descripcion_normalizada=ilike.*${p}*`).join('&');
+        const r = await sbFetch(
+          `${SB_URL}/rest/v1/cabys_catalogo?select=codigo,descripcion&${filtro}&limit=5`,
+          {}
+        );
+        if(r && r.length){
+          r.forEach(x => {
+            if(!sugs.find(s => s.codigo === x.codigo)){
+              sugs.push({
+                codigo: x.codigo,
+                descripcion: x.descripcion,
+                fuente: '📋 Catálogo CABYS',
+                score: 0.5
+              });
+            }
+          });
+        }
       }
-    } catch(e){ /* sin catálogo */ }
+    } catch(e){ console.warn('Catálogo error:', e); }
   }
 
   sugs.sort((a,b) => b.score - a.score);
@@ -4666,7 +4669,6 @@ async function pmCabysBuscar(q){
   pmCabysMostrarSugs(sugs);
   document.getElementById('pm-cabys-status').textContent = '';
 }
-
 function pmCabysMostrarSugs(sugs){
   const box = document.getElementById('pm-cabys-sugs');
   box.innerHTML = sugs.map((s,i) => `
