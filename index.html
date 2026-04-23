@@ -2139,7 +2139,6 @@ function scanBarcode(){
   if(!code)return;
   const prod=allProds.find(p=>(p.codigo_barras||'')===code);
   if(prod){
-    if(Number(prod.stock||0)<=0){toast('Producto agotado','w');return;}
     addToCart(prod.id);
     renderCart();
     input.value='';
@@ -2228,7 +2227,7 @@ function setPay(m){
 function addToCart(id){
   const p=allProds.find(x=>x.id===id);if(!p)return;
   const ex=cart.find(x=>x.id===id);
-  if(ex){if(ex.qty>=Number(p.stock||0)){toast('Stock insuficiente','w');return;}ex.qty++;}
+if(ex){ex.qty++;}
    else cart.push({
     id:p.id, nombre:p.nombre,
     precio:Number(p.precio_venta||0),
@@ -2262,18 +2261,14 @@ renderCart();
 function removeFromCart(id){cart=cart.filter(x=>x.id!==id);renderCart();}
 function changeQty(id,d){
   const item=cart.find(x=>x.id===id);if(!item)return;
-  const prod=allProds.find(x=>x.id===id);
   item.qty+=d;
   if(item.qty<=0){cart=cart.filter(x=>x.id!==id);}
-  else if(prod&&item.qty>Number(prod.stock||0)){item.qty--;toast('Stock insuficiente','w');}
   renderCart();
 }
 function setQty(id,v){
   const item=cart.find(x=>x.id===id);if(!item)return;
-  const prod=allProds.find(x=>x.id===id);
   const nuevaQty=Number(v)||0;
   if(nuevaQty<=0){cart=cart.filter(x=>x.id!==id);renderCart();return;}
-  if(prod&&nuevaQty>Number(prod.stock||0)){toast('Stock insuficiente','w');return;}
   item.qty=nuevaQty;
   renderCart();
 }
