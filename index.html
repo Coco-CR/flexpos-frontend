@@ -1124,17 +1124,26 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
         </div>
         <div class="pos-row1">
           <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="
-            if(event.key==='Enter'){event.preventDefault();if(document.getElementById('pos-q').value.trim())scanBarcode();else openCobrar();}
-            if(event.code==='Space'&&!document.getElementById('pos-q').value.trim()&&cart.length){
-              event.preventDefault();
-              const item=cart[0];
-              if(item&&item.unidad_medida!=='kg'){
-                item.qty++;
-                renderCart();
-                pitidoConfirmacion();
-                mostrarQtyBadge(item.qty, item.nombre);
+             if(event.key==='Enter'){event.preventDefault();if(document.getElementById('pos-q').value.trim())scanBarcode();else openCobrar();}
+              if((event.key==='+'||event.code==='NumpadAdd')&&!document.getElementById('pos-q').value.trim()&&cart.length){
+                event.preventDefault();
+                const item=cart[0];
+                if(item&&item.unidad_medida!=='kg'){
+                  item.qty++;
+                  renderCart();
+                  pitidoConfirmacion();
+                  mostrarQtyBadge(item.qty,item.nombre);
+                }
               }
-            }
+              if((event.key==='-'||event.code==='NumpadSubtract')&&!document.getElementById('pos-q').value.trim()&&cart.length){
+                event.preventDefault();
+                const item=cart[0];
+                if(item&&item.unidad_medida!=='kg'){
+                  item.qty--;
+                  if(item.qty<=0){cart.shift();renderCart();}
+                  else{renderCart();pitidoConfirmacion();mostrarQtyBadge(item.qty,item.nombre);}
+                }
+              }
           "></div>
           <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
           <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
@@ -2465,23 +2474,6 @@ function mostrarQtyBadge(qty, nombre=''){
   _qtyBadgeTimer=setTimeout(()=>badge.classList.remove('on'),900);
 }
 
-document.addEventListener('keydown',function(e){
-  // Barra espaciadora — solo si el modal de ticket NO está abierto
-  // y hay al menos un producto en el carrito
-  if(e.code!=='Space')return;
-  if(document.getElementById('m-ticket')?.classList.contains('on'))return;
-  // No activar si el foco está en un input o textarea
-  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
-  if(!cart.length)return;
-  e.preventDefault();
-  // Sumar 1 al primer producto del carrito (el más reciente con unshift)
-  const item=cart[0];
-  if(item.unidad_medida==='kg')return; // no aplica para pesados
-  item.qty++;
-  renderCart();
-  pitidoConfirmacion();
-  mostrarQtyBadge(item.qty, item.nombre);
-});
 /* ═══════════════════════════════════════════════════
    CLIENTS IN CART
 ═══════════════════════════════════════════════════ */
