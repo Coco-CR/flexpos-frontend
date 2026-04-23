@@ -1582,6 +1582,13 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     <input type="text" id="pm-barcode" placeholder="Escanear o digitar código de barras">
   </div>
   <div class="frow2">
+     <div class="field">
+     <label>Unidad de medida</label>
+     <select id="pm-unidad">
+     <option value="Unid">Unid — unidades</option>
+     <option value="kg">kg — kilogramos (precio por kg, cantidad en gramos)</option>
+  </select>
+  </div>
     <div class="field">
       <label>Stock (unidades) *</label>
       <input type="number" id="pm-stock" placeholder="0" min="0" step="1">
@@ -2221,12 +2228,14 @@ function addToCart(id){
   const p=allProds.find(x=>x.id===id);if(!p)return;
   const ex=cart.find(x=>x.id===id);
   if(ex){if(ex.qty>=Number(p.stock||0)){toast('Stock insuficiente','w');return;}ex.qty++;}
-  else cart.push({
+   else cart.push({
     id:p.id, nombre:p.nombre,
     precio:Number(p.precio_venta||0),
     cabys:p.cabys||'',
     tarifa_iva:p.tarifa_iva||'13',
-    qty:1, discPct:0, discNat:'01'
+    unidad_medida:p.unidad_medida||'Unid',
+    qty:p.unidad_medida==='kg'?100:1,
+    discPct:0, discNat:'01'
   });
   renderCart();
   // Feedback visual: flash en la fila y pulso en el contador
@@ -2280,7 +2289,9 @@ function renderCart(){
     updateTotals();return;
   }
   body.innerHTML=cart.map(item=>{
-    const base=item.precio*item.qty;
+    const esKg=item.unidad_medida==='kg';
+    const qtyKg=esKg?item.qty/1000:item.qty;
+    const base=item.precio*qtyKg;
     const disc=Math.round(base*item.discPct/100);
     const net=base-disc;
     const tiva=item.tarifa_iva||'13';
@@ -2291,11 +2302,11 @@ function renderCart(){
       <div class="ci-tot">₡${fmt(net)}</div>
       <div class="ci-ctrl">
         <button class="qbtn" onclick="changeQty(${item.id},-1)">−</button>
-        <<input type="number" class="qn-input" value="${item.qty}" min="0" step="0.001" onchange="setQty(${item.id},this.value)" onclick="this.select()">
+        <input type="number" class="qn-input" value="${item.qty}" min="0" step="${esKg?1:0.001}" onchange="setQty(${item.id},this.value)" onclick="this.select()" title="${esKg?'Gramos':'Unidades'}">
         <button class="qbtn" onclick="changeQty(${item.id},1)">+</button>
         <button class="ci-rm" onclick="removeFromCart(${item.id})">✕</button>
       </div>
-      <div class="ci-sub">₡${fmt(item.precio)} c/u${item.discPct>0?` · Desc.${item.discPct}%`:''}</div>
+      <div class="ci-sub">₡${fmt(item.precio)} x ${esKg?'kg':'u'}${item.discPct>0?` · Desc.${item.discPct}%`:''}</div>
       <div class="ci-disc"><input type="number" min="0" max="100" placeholder="% desc" value="${item.discPct||''}" oninput="setLineDisc(${item.id},this.value)"><span>% por línea</span></div>
     </div>`;
   }).join('');
@@ -2312,7 +2323,8 @@ function calcTotals(){
     const rate=i.tarifa_iva||'13';
     const r=ivaRates[rate]||0;
     // precio de venta (con IVA incluido) por cantidad
-    const brutoLinea = i.precio * i.qty;
+    const qtyParaPrecio = i.unidad_medida==='kg' ? i.qty/1000 : i.qty;
+    const brutoLinea = i.precio * qtyParaPrecio;
     // descuento de línea sobre el bruto con IVA
     const discLinea = Math.round(brutoLinea * (i.discPct||0)/100);
     // neto de línea después de descuento de línea y global
@@ -3012,6 +3024,7 @@ function abrirModalProd(id){
   document.getElementById('pm-stock').value=p!=null?p.stock:'';
   document.getElementById('pm-cabys').value=p?.cabys||'';
   document.getElementById('pm-iva').value=p?.tarifa_iva||'13';
+  document.getElementById('pm-unidad').value=p?.unidad_medida||'Unid';
   document.getElementById('pm-barcode').value=p?.codigo_barras||'';
   // Populate proveedores dropdown
   const provSel=document.getElementById('pm-proveedor');
@@ -3064,6 +3077,7 @@ async function saveProd(){
   const stock=document.getElementById('pm-stock').value;
   const cabys=document.getElementById('pm-cabys').value.trim();
   const tarifa_iva=document.getElementById('pm-iva').value||'13';
+  const unidad_medida=document.getElementById('pm-unidad').value||'Unid';
   const provId=document.getElementById('pm-proveedor').value||null;
   const codigo_barras=document.getElementById('pm-barcode').value.trim()||null;
 
@@ -3088,6 +3102,7 @@ async function saveProd(){
     cabys,
     codigo_barras,
     actualizado_por: SB_USER,
+    unidad_medida,
   };
   const btn=document.getElementById('pm-save-btn');
   btn.disabled=true; btn.textContent='Guardando…';
@@ -3700,14 +3715,15 @@ async function enviarAHacienda(doc){
     // Mapear items al formato del backend
     const items=doc.items.map(it=>{
       const tarifaPct=parseFloat(it.tarifa_iva||'13')||0;
-      const cantidad=Number(it.qty)||1;
+      const esKg=it.unidad_medida==='kg';
+      const cantidad=esKg?Number(it.qty)/1000:Number(it.qty)||1;
       const precioUnitario=Number(it.precio)||0;
       const baseLinea=precioUnitario*cantidad;
       const descuentoMonto=Math.round(baseLinea*((it.discPct||0)/100));
       return {
         cabys:          it.cabys||'',
         cantidad:       cantidad,
-        unidadMedida:   'Unid',
+        unidadMedida:   esKg?'kg':'Unid',
         detalle:        it.nombre||'',
         precioUnitario: precioUnitario,
         tarifaIvaPct:   tarifaPct,
