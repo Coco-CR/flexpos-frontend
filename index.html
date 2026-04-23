@@ -2154,12 +2154,14 @@ function scanBarcode(){
       osc.connect(gain);gain.connect(ctx.destination);
       osc.type='square';
       osc.frequency.setValueAtTime(440,ctx.currentTime);
-      gain.gain.setValueAtTime(0.6,ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      gain.gain.setValueAtTime(1.0,ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.6);
       osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime+0.6);
+      osc.stop(ctx.currentTime+0.8);
     }catch(e){ console.warn('Audio error:',e); }
     toast('Codigo no encontrado en inventario','e');
+    input.value='';
+    renderProds('');
   }
 }function renderProds(q=''){
   const dd=document.getElementById('prod-dropdown');
