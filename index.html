@@ -2238,14 +2238,19 @@ function addToCart(id){
     qty:p.unidad_medida==='kg'?100:1,
     discPct:0, discNat:'01'
   });
-  renderCart();
-  // Feedback visual: flash en la fila y pulso en el contador
+renderCart();
+  // Feedback visual + auto-foco en input de peso para productos kg
   setTimeout(()=>{
     const rows=document.querySelectorAll('#cart-body .cart-item');
     const idx=cart.findIndex(x=>x.id===id);
     if(rows[idx]){
       rows[idx].classList.add('flash');
       setTimeout(()=>rows[idx]?.classList.remove('flash'),500);
+      // Si es kg, enfocar y seleccionar el input de cantidad para ingresar peso
+      if(p.unidad_medida==='kg'){
+        const input=rows[idx].querySelector('.qn-input');
+        if(input){input.focus();input.select();}
+      }
     }
     const cnt=document.getElementById('cart-cnt');
     if(cnt){
@@ -2303,7 +2308,7 @@ function renderCart(){
       <div class="ci-tot">₡${fmt(net)}</div>
       <div class="ci-ctrl">
         <button class="qbtn" onclick="changeQty(${item.id},-1)">−</button>
-        <input type="number" class="qn-input" value="${item.qty}" min="0" step="${esKg?1:0.001}" onchange="setQty(${item.id},this.value)" onclick="this.select()" title="${esKg?'Gramos':'Unidades'}">
+        <input type="number" class="qn-input" value="${item.qty}" min="0" step="${esKg?1:0.001}" onchange="setQty(${item.id},this.value)" onclick="this.select()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();document.getElementById('pos-q')?.focus();}" title="${esKg?'Gramos':'Unidades'}">
         <button class="qbtn" onclick="changeQty(${item.id},1)">+</button>
         <button class="ci-rm" onclick="removeFromCart(${item.id})">✕</button>
       </div>
