@@ -975,6 +975,25 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   font-size:14px !important;
   font-family:var(--font);
 }
+.qty-badge{
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:var(--teal);
+  color:#000;
+  font-size:72px;
+  font-weight:900;
+  font-family:var(--mono);
+  padding:24px 48px;
+  border-radius:16px;
+  z-index:9999;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 0.15s;
+  box-shadow:0 8px 32px rgba(0,0,0,0.4);
+}
+.qty-badge.on{opacity:1;}
 </style>
 </head>
 <body>
@@ -2231,7 +2250,7 @@ function addToCart(id){
   const p=allProds.find(x=>x.id===id);if(!p)return;
   const ex=cart.find(x=>x.id===id);
 if(ex){ex.qty++;}
-   else cart.push({
+   else cart.unshift({
     id:p.id, nombre:p.nombre,
     precio:Number(p.precio_venta||0),
     cabys:p.cabys||'',
@@ -2405,6 +2424,48 @@ function renderSelectorActividad() {
     sel.appendChild(opt);
   });
 }
+   function pitidoConfirmacion(){
+  try{
+    const ctx=new (window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator();
+    const gain=ctx.createGain();
+    osc.connect(gain);gain.connect(ctx.destination);
+    osc.type='sine';
+    osc.frequency.setValueAtTime(880,ctx.currentTime);
+    gain.gain.setValueAtTime(0.4,ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime+0.12);
+  }catch(e){}
+}
+   let _qtyBadgeTimer=null;
+
+function mostrarQtyBadge(qty){
+  const badge=document.getElementById('qty-badge');
+  if(!badge)return;
+  badge.textContent='×'+qty;
+  badge.classList.add('on');
+  clearTimeout(_qtyBadgeTimer);
+  _qtyBadgeTimer=setTimeout(()=>badge.classList.remove('on'),900);
+}
+
+document.addEventListener('keydown',function(e){
+  // Barra espaciadora — solo si el modal de ticket NO está abierto
+  // y hay al menos un producto en el carrito
+  if(e.code!=='Space')return;
+  if(document.getElementById('m-ticket')?.classList.contains('on'))return;
+  // No activar si el foco está en un input o textarea
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+  if(!cart.length)return;
+  e.preventDefault();
+  // Sumar 1 al primer producto del carrito (el más reciente con unshift)
+  const item=cart[0];
+  if(item.unidad_medida==='kg')return; // no aplica para pesados
+  item.qty++;
+  renderCart();
+  pitidoConfirmacion();
+  mostrarQtyBadge(item.qty);
+});
 /* ═══════════════════════════════════════════════════
    CLIENTS IN CART
 ═══════════════════════════════════════════════════ */
@@ -4755,5 +4816,6 @@ document.addEventListener('click', e => {
 });
 setDoc('TE');
 </script>
+<div class="qty-badge" id="qty-badge"></div>
 </body>
 </html>                                                                               
