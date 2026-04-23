@@ -1113,75 +1113,74 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     </div>
 
     <!-- POS -->
-    <div id="p-pos" class="page full-layout">
-      <div class="pos-wrap">
-        <div class="pos-left">
-          <div class="pos-topbar">
-            <div class="pos-topbar">
-              <div class="doc-pills">
-                <button class="pill p-fe on" id="pill-fe" onclick="setDoc('FE')">📄 Factura Electrónica</button>
-                <button class="pill p-te" id="pill-te" onclick="setDoc('TE')">🧾 Tiquete</button>
-                <button class="pill p-nc" id="pill-nc" onclick="setDoc('NC')">↩ Nota de Crédito</button>
-              </div>
-                <div class="pos-row1">
-                  <input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="
-                    if(event.key==='Enter'){event.preventDefault();if(document.getElementById('pos-q').value.trim())scanBarcode();else openCobrar();}
-                    if(event.code==='Space'&&!document.getElementById('pos-q').value.trim()&&cart.length){
-                      event.preventDefault();
-                      const item=cart[0];
-                      if(item&&item.unidad_medida!=='kg'){
-                        item.qty++;
-                        renderCart();
-                        pitidoConfirmacion();
-                        mostrarQtyBadge(item.qty);
-                      }
-                    }
-                  ">
-                 </div>
-                 <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
-                 <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
-                 <div class="prod-dropdown" id="prod-dropdown"></div>
-               </div>
-            </div>
-          </div>
-          <div class="cart-body" id="cart-body"><div class="cart-empty"><div class="ce-icon">🛒</div><div style="font-size:16px;font-weight:600;">Toca un producto para agregarlo</div></div></div>
+<div id="p-pos" class="page full-layout">
+  <div class="pos-wrap">
+    <div class="pos-left">
+      <div class="pos-topbar">
+        <div class="doc-pills">
+          <button class="pill p-fe on" id="pill-fe" onclick="setDoc('FE')">📄 Factura Electrónica</button>
+          <button class="pill p-te" id="pill-te" onclick="setDoc('TE')">🧾 Tiquete</button>
+          <button class="pill p-nc" id="pill-nc" onclick="setDoc('NC')">↩ Nota de Crédito</button>
+        </div>
+        <div class="pos-row1">
+          <div class="sw"><span class="si">🔍</span><input type="text" id="pos-q" placeholder="Buscar o escanear código…" oninput="filterProds()" onkeydown="
+            if(event.key==='Enter'){event.preventDefault();if(document.getElementById('pos-q').value.trim())scanBarcode();else openCobrar();}
+            if(event.code==='Space'&&!document.getElementById('pos-q').value.trim()&&cart.length){
+              event.preventDefault();
+              const item=cart[0];
+              if(item&&item.unidad_medida!=='kg'){
+                item.qty++;
+                renderCart();
+                pitidoConfirmacion();
+                mostrarQtyBadge(item.qty, item.nombre);
+              }
+            }
+          "></div>
+          <button class="btn btn-s btn-sm" onclick="filterProds('')">Todos</button>
+          <button class="btn btn-p btn-sm" onclick="abrirModalProd()">＋ Nuevo</button>
           <div class="prod-dropdown" id="prod-dropdown"></div>
         </div>
-        <div class="pos-right">
-          <div class="cart-head">
-            <div class="cart-title-row">
-              <div class="cart-title">🛒 <span id="cart-doc-lbl">Factura Electrónica</span><span class="cart-cnt" id="cart-cnt">0</span></div>
-              <button class="btn btn-s btn-sm" onclick="openM('m-disc')">% Desc</button>
-            </div>
-            <div class="nc-refrow" id="nc-ref-row">↩ Ref: <input type="text" id="nc-ref" placeholder="N° factura original…"></div>
-            <div class="client-row">
-              <input type="text" id="cart-cli-name" placeholder="Consumidor Final ✓" readonly>
-              <button class="btn-pick" onclick="openM('m-pick-cli')">👤 Cliente</button>
-            </div>
-          </div>
-          <div class="cart-foot">
-            <div class="glob-disc-row" id="gd-row"><span style="font-size:11px;color:var(--orange);">🏷</span><span style="font-size:11px;color:var(--orange);" id="gd-lbl">0%</span><button onclick="rmGlobDisc()" style="background:none;border:none;color:var(--text3);cursor:pointer;margin-left:auto;font-size:13px;">✕</button></div>
-            <div class="t-row"><span>Subtotal</span><span id="t-sub">₡0</span></div>
-            <div class="t-row disc" id="t-disc-row" style="display:none"><span>Descuento</span><span id="t-disc">-₡0</span></div>
-            <div class="t-row iva"><span>IVA</span><span id="t-iva">₡0</span></div>
-            <div class="iva-desglose" id="iva-desglose" style="display:none;"></div>
-            <div class="t-row big"><span>TOTAL</span><span id="t-total">₡0</span></div>
-            <div class="t-usd" id="t-usd">$0.00 USD</div>
-            <div class="cur-row">
-              <button class="cbtn on" id="cur-crc" onclick="setCur('CRC')">₡ Colones</button>
-              <button class="cbtn usd" id="cur-usd" onclick="setCur('USD')">$ Dólares</button>
-            </div>
-            <div class="pay-row">
-              <button class="pbtn on" id="pb-ef" onclick="setPay('efectivo')">💵 Efectivo</button>
-              <button class="pbtn" id="pb-tj" onclick="setPay('tarjeta')">💳 Tarjeta</button>
-              <button class="pbtn" id="pb-sp" onclick="setPay('sinpe')">📱 SINPE</button>
-              <button class="pbtn" id="pb-tr" onclick="setPay('transferencia')">🏦 Transfer.</button>
-            </div>
-            <button class="btn-cobrar" id="btn-cobrar" onclick="openCobrar()" disabled>💳 Cobrar</button>
-            <button class="btn-limpiar" onclick="clearCart()">🗑 Limpiar</button>
-          </div>
+      </div>
+      <div class="cart-body" id="cart-body">
+        <div class="cart-empty"><div class="ce-icon">🛒</div><div style="font-size:16px;font-weight:600;">Toca un producto para agregarlo</div></div>
+      </div>
+    </div>
+    <div class="pos-right">
+      <div class="cart-head">
+        <div class="cart-title-row">
+          <div class="cart-title">🛒 <span id="cart-doc-lbl">Factura Electrónica</span><span class="cart-cnt" id="cart-cnt">0</span></div>
+          <button class="btn btn-s btn-sm" onclick="openM('m-disc')">% Desc</button>
+        </div>
+        <div class="nc-refrow" id="nc-ref-row">↩ Ref: <input type="text" id="nc-ref" placeholder="N° factura original…"></div>
+        <div class="client-row">
+          <input type="text" id="cart-cli-name" placeholder="Consumidor Final ✓" readonly>
+          <button class="btn-pick" onclick="openM('m-pick-cli')">👤 Cliente</button>
         </div>
       </div>
+      <div class="cart-foot">
+        <div class="glob-disc-row" id="gd-row"><span style="font-size:11px;color:var(--orange);">🏷</span><span style="font-size:11px;color:var(--orange);" id="gd-lbl">0%</span><button onclick="rmGlobDisc()" style="background:none;border:none;color:var(--text3);cursor:pointer;margin-left:auto;font-size:13px;">✕</button></div>
+        <div class="t-row"><span>Subtotal</span><span id="t-sub">₡0</span></div>
+        <div class="t-row disc" id="t-disc-row" style="display:none"><span>Descuento</span><span id="t-disc">-₡0</span></div>
+        <div class="t-row iva"><span>IVA</span><span id="t-iva">₡0</span></div>
+        <div class="iva-desglose" id="iva-desglose" style="display:none;"></div>
+        <div class="t-row big"><span>TOTAL</span><span id="t-total">₡0</span></div>
+        <div class="t-usd" id="t-usd">$0.00 USD</div>
+        <div class="cur-row">
+          <button class="cbtn on" id="cur-crc" onclick="setCur('CRC')">₡ Colones</button>
+          <button class="cbtn usd" id="cur-usd" onclick="setCur('USD')">$ Dólares</button>
+        </div>
+        <div class="pay-row">
+          <button class="pbtn on" id="pb-ef" onclick="setPay('efectivo')">💵 Efectivo</button>
+          <button class="pbtn" id="pb-tj" onclick="setPay('tarjeta')">💳 Tarjeta</button>
+          <button class="pbtn" id="pb-sp" onclick="setPay('sinpe')">📱 SINPE</button>
+          <button class="pbtn" id="pb-tr" onclick="setPay('transferencia')">🏦 Transfer.</button>
+        </div>
+        <button class="btn-cobrar" id="btn-cobrar" onclick="openCobrar()" disabled>💳 Cobrar</button>
+        <button class="btn-limpiar" onclick="clearCart()">🗑 Limpiar</button>
+      </div>
+    </div>
+  </div>
+</div>
       <!-- Barra de atajos de teclado -->
       <div class="hotkeys-bar">
         <div class="hk"><span class="hk-key">F2</span> Buscar</div>
@@ -2281,7 +2280,11 @@ renderCart();
       rows[idx].classList.add('flash');
       setTimeout(()=>rows[idx]?.classList.remove('flash'),500);
       // Si es kg, enfocar y seleccionar el input de cantidad para ingresar peso
-      if(p.unidad_medida==='kg'){
+      if(p.unidad_medida!=='kg'){
+        pitidoConfirmacion();
+        mostrarQtyBadge(cart[0].qty, p.nombre);
+      }
+       if(p.unidad_medida==='kg'){
         const input=rows[idx].querySelector('.qn-input');
         if(input){input.focus();input.select();}
       }
@@ -2453,10 +2456,10 @@ function renderSelectorActividad() {
 }
    let _qtyBadgeTimer=null;
 
-function mostrarQtyBadge(qty){
+function mostrarQtyBadge(qty, nombre=''){
   const badge=document.getElementById('qty-badge');
   if(!badge)return;
-  badge.textContent='×'+qty;
+  badge.innerHTML=`<div style="font-size:32px;font-weight:500;margin-bottom:8px;opacity:0.85">${nombre}</div><div>×${qty}</div>`;
   badge.classList.add('on');
   clearTimeout(_qtyBadgeTimer);
   _qtyBadgeTimer=setTimeout(()=>badge.classList.remove('on'),900);
@@ -2477,7 +2480,7 @@ document.addEventListener('keydown',function(e){
   item.qty++;
   renderCart();
   pitidoConfirmacion();
-  mostrarQtyBadge(item.qty);
+  mostrarQtyBadge(item.qty, item.nombre);
 });
 /* ═══════════════════════════════════════════════════
    CLIENTS IN CART
