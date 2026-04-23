@@ -1208,6 +1208,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
                   <th class="r">P. Venta ₡</th>
                   <th>Unidad</th>                   
                   <th>IVA</th>
+                  <th>Código barras</th>                   
                   <th>CABYS</th>
                   <th>Proveedor</th>
                   <th>Última actualización</th>
@@ -2957,7 +2958,7 @@ function renderInvPage(){
   const s=(invPage-1)*INV_PG, sl=filteredInv.slice(s,s+INV_PG);
   const body=document.getElementById('inv-body'); if(!body)return;
   if(!sl.length){
-    body.innerHTML=`<tr><td colspan="13" style="text-align:center;padding:40px;color:var(--text3);">${allProds.length?'Sin resultados para ese filtro.':'Sin productos aún.'}</td></tr>`;
+    body.innerHTML=`<tr><td colspan="14" style="text-align:center;padding:40px;color:var(--text3);">${allProds.length?'Sin resultados para ese filtro.':'Sin productos aún.'}</td></tr>`;
   } else {
     const ivaLbl={'13':'13%','4':'4%','2':'2%','1':'1%','0':'Exento','0e':'No suj.'};
     const ivaCls={'13':'iva-13','4':'iva-4','2':'iva-2','1':'iva-1','0':'iva-0','0e':'iva-0'};
@@ -2983,6 +2984,7 @@ function renderInvPage(){
         <td class="r td-venta">${venta>0?'₡'+fmt(venta):'—'}</td>
         <td><span style="font-size:12px;font-weight:600;color:${p.unidad_medida==='kg'?'var(--orange)':'var(--text3)'};">${p.unidad_medida||'Unid'}</span></td>         
         <td><span class="iva-badge ${ivaCls[tiva]||'iva-13'}">IVA ${ivaLbl[tiva]||tiva+'%'}</span></td>
+        <td class="td-barcode">${esc(p.codigo_barras)||'—'}</td>         
         <td class="td-cabys">${esc(p.cabys)||'—'}</td>
         <td class="td-prov">${esc(p.proveedor_nombre)||'—'}</td>
         <td class="td-ts">${ts}</td>
