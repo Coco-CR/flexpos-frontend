@@ -2158,6 +2158,75 @@ function updateDash(){
     </div>`).join('')}</div>`:'';}
 
 /* ═══════════════════════════════════════════════════
+   HISTORIAL SUPABASE
+═══════════════════════════════════════════════════ */
+const TENANT_ID = '503710164';
+const SB_HIST   = () => `${SB_URL}/rest/v1/historial`;
+
+async function saveDocToSupabase(doc) {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    const row = {
+      id:              doc.id,
+      tenant_id:       TENANT_ID,
+      tipo:            doc.tipo,
+      numero:          doc.numero   || '',
+      clave:           doc.clave    || '',
+      fecha_emision:   doc.fechaISO || doc.fechaStr || null,
+      total:           doc.total    || 0,
+      cliente_nombre:  doc.cliente?.nombre || 'Consumidor Final',
+      cliente_email:   doc.cliente?.email  || '',
+      hacienda_estado: doc.haciendaEstado  || 'pendiente',
+      email_enviado:   doc.emailEnviado    || false,
+      doc_json:        doc,
+    };
+    await sbFetch(`${SB_HIST()}`, {
+      method:  'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body:    JSON.stringify(row),
+    });
+  } catch (e) {
+    // No bloquea el flujo — localStorage ya tiene el doc
+    console.warn('saveDocToSupabase error:', e.message);
+  }
+}
+
+async function updateDocInSupabase(docId, fields) {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    await sbFetch(`${SB_HIST()}?id=eq.${docId}&tenant_id=eq.${TENANT_ID}`, {
+      method: 'PATCH',
+      body:   JSON.stringify(fields),
+    });
+  } catch (e) {
+    console.warn('updateDocInSupabase error:', e.message);
+  }
+}
+
+async function loadHistoryFromSupabase() {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    const rows = await sbFetch(
+      `${SB_HIST()}?tenant_id=eq.${TENANT_ID}&order=creado_at.desc&limit=500`
+    );
+    if (!rows?.length) return;
+    // Merge: Supabase es fuente de verdad, localStorage como fallback
+    const sbIds = new Set(rows.map(r => r.id));
+    const local = (JSON.parse(ls('pos_history') || '[]'))
+      .filter(d => !sbIds.has(d.id));
+    allHistory = [
+      ...rows.map(r => ({ ...r.doc_json, haciendaEstado: r.hacienda_estado, emailEnviado: r.email_enviado })),
+      ...local,
+    ];
+    lss('pos_history', JSON.stringify(allHistory));
+    renderHist();
+  } catch (e) {
+    console.warn('loadHistoryFromSupabase error:', e.message);
+    // Fallback silencioso a localStorage
+  }
+}
+
+/* ═══════════════════════════════════════════════════
    POS — PRODUCTOS
 ═══════════════════════════════════════════════════ */
 const EMOJIS=['🍎','🥛','🥩','🧴','🍞','🥤','🍫','🥚','🧃','🫙','🍚','🧹','📦','🫧','🧼','🥫','🍿','🧂'];
@@ -2569,6 +2638,9 @@ async function procesarPago(){
   if(docType!=='NC')await decrStock(doc.items);else await incrStock(doc.items);
   allHistory.unshift(doc);lss('pos_history',JSON.stringify(allHistory));
   // ── Enviar a Hacienda automáticamente si hay backend configurado ──
+   allHistory.unshift(doc);
+   lss('pos_history', JSON.stringify(allHistory));
+   saveDocToSupabase(doc);   // ← agregar esta línea
   if(BACKEND_URL&&BACKEND_KEY){
     // Mostrar estado: firmando…
     const idx=0; // recién insertado al inicio
@@ -4036,6 +4108,14 @@ async function consultarHacienda(docId, opts = {}) {
       lss('pos_history', JSON.stringify(allHistory));
       renderHist();
       if (!silent) toast('Estado actualizado', 's');
+      // Bloque 3 — correo post-aceptación
+      if ((data.ind_estado || '').toLowerCase() === 'aceptado') {
+        sendConfirmationEmail(allHistory[idx]);
+      }
+      // Bloque 4 — sync estado a Supabase
+      updateDocInSupabase(docId, {
+        hacienda_estado: data.ind_estado || 'recibido',
+      });
     }
   } catch (e) {
     if (!silent) toast('Error de red al consultar: ' + e.message, 'e');
@@ -4046,7 +4126,6 @@ async function consultarHacienda(docId, opts = {}) {
     }
   }
 }
-
 /* ═══════════════════════════════════════════════════
    CIERRE DE CAJA
 ═══════════════════════════════════════════════════ */
