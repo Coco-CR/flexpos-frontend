@@ -4132,7 +4132,7 @@ async function consultarHacienda(docId, opts = {}) {
 
 async function sendConfirmationEmail(doc) {
   // Solo FE. TE y NC no disparan correo.
-  if (!['FE', 'NC'].includes(doc.tipo)) return;Se
+  if (!['FE', 'NC'].includes(doc.tipo)) return;
 
   const email = doc.cliente?.email;
   if (!email) {
