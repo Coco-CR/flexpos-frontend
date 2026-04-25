@@ -2051,7 +2051,7 @@ function go(name){
   const tn=document.querySelector(`[data-p="${name}"]`);if(tn)tn.classList.add('on');
   if(name==='pos'){renderProds();setTimeout(()=>document.getElementById('pos-q')?.focus(),80);}
   if(name==='clientes'){loadClientsFromDB();}
-  if(name==='historial')renderHist();
+  if(name==='historial'){loadHistoryFromSupabase();renderHist();}
   if(name==='reportes')renderReportes();
   if(name==='caja'){
     // Inicializar fecha de hoy y renderizar
@@ -2108,6 +2108,72 @@ async function loadProds(){
     }
   }
   filterInv();renderProds();updateDash();
+}
+
+   /* ═══════════════════════════════════════════════════
+   HISTORIAL SUPABASE
+═══════════════════════════════════════════════════ */
+const TENANT_ID = '503710164';
+const SB_HIST   = () => `${SB_URL}/rest/v1/historial`;
+
+async function saveDocToSupabase(doc) {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    const row = {
+      id:              doc.id,
+      tenant_id:       TENANT_ID,
+      tipo:            doc.tipo,
+      numero:          doc.numero   || '',
+      clave:           doc.clave    || '',
+      fecha_emision:   doc.fecha    || null,
+      total:           doc.total    || 0,
+      cliente_nombre:  doc.cliente?.nombre || 'Consumidor Final',
+      cliente_email:   doc.cliente?.email  || '',
+      hacienda_estado: doc.haciendaEstado  || 'pendiente',
+      email_enviado:   doc.emailEnviado    || false,
+      doc_json:        doc,
+    };
+    await sbFetch(`${SB_HIST()}`, {
+      method:  'POST',
+      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body:    JSON.stringify(row),
+    });
+  } catch (e) {
+    console.warn('saveDocToSupabase error:', e.message);
+  }
+}
+
+async function updateDocInSupabase(docId, fields) {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    await sbFetch(`${SB_HIST()}?id=eq.${docId}&tenant_id=eq.${TENANT_ID}`, {
+      method: 'PATCH',
+      body:   JSON.stringify(fields),
+    });
+  } catch (e) {
+    console.warn('updateDocInSupabase error:', e.message);
+  }
+}
+
+async function loadHistoryFromSupabase() {
+  if (!SB_URL || !SB_KEY) return;
+  try {
+    const rows = await sbFetch(
+      `${SB_HIST()}?tenant_id=eq.${TENANT_ID}&order=creado_at.desc&limit=500`
+    );
+    if (!rows?.length) return;
+    const sbIds = new Set(rows.map(r => r.id));
+    const local = (JSON.parse(ls('pos_history') || '[]'))
+      .filter(d => !sbIds.has(d.id));
+    allHistory = [
+      ...rows.map(r => ({ ...r.doc_json, haciendaEstado: r.hacienda_estado, emailEnviado: r.email_enviado })),
+      ...local,
+    ];
+    lss('pos_history', JSON.stringify(allHistory));
+    renderHist();
+  } catch (e) {
+    console.warn('loadHistoryFromSupabase error:', e.message);
+  }
 }
 
 /* ═══════════════════════════════════════════════════
@@ -2637,6 +2703,7 @@ async function procesarPago(){
   // doc.xml se llenará después con el XML firmado que regrese del backend
   if(docType!=='NC')await decrStock(doc.items);else await incrStock(doc.items);
   allHistory.unshift(doc);lss('pos_history',JSON.stringify(allHistory));
+saveDocToSupabase(doc);
   // ── Enviar a Hacienda automáticamente si hay backend configurado ──
    allHistory.unshift(doc);
    lss('pos_history', JSON.stringify(allHistory));
@@ -4124,6 +4191,67 @@ async function consultarHacienda(docId, opts = {}) {
       btn.classList.remove('loading');
       btn.textContent = '🔄';
     }
+  }
+}
+
+/* ═══════════════════════════════════════════════════
+   CORREO POST-ACEPTACIÓN — Resend via Railway
+═══════════════════════════════════════════════════ */
+
+async function sendConfirmationEmail(doc) {
+  // Solo FE. TE y NC no disparan correo.
+  if (!['FE', 'NC'].includes(doc.tipo)) return;Se
+
+  const email = doc.cliente?.email;
+  if (!email) {
+    toast('Aceptado ✓ — sin email del cliente, correo omitido', 'w');
+    return;
+  }
+
+  const payload = {
+    to:      email,
+    numero:  doc.numero,
+    clave:   doc.clave,
+    total:   doc.total,
+    emisor:  doc.bizSnap?.nombre || '',
+    fecha:   doc.fechaStr || '',
+  };
+
+  const tryOnce = () =>
+    fetch(`${BACKEND_URL}/api/send-email`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': BACKEND_KEY },
+      body:    JSON.stringify(payload),
+    });
+
+  try {
+    let res = await tryOnce();
+
+    // 1 reintento automático si falla
+    if (!res.ok) {
+      await new Promise(r => setTimeout(r, 4000));
+      res = await tryOnce();
+    }
+
+    if (res.ok) {
+      const idx = allHistory.findIndex(x => x.id === doc.id);
+      if (idx >= 0) {
+        allHistory[idx].emailEnviado = true;
+        lss('pos_history', JSON.stringify(allHistory));
+        updateDocInSupabase(doc.id, { email_enviado: true });
+      }
+      toast(`Correo enviado a ${email}`, 's');
+    } else {
+      const idx = allHistory.findIndex(x => x.id === doc.id);
+      if (idx >= 0) {
+        allHistory[idx].emailFallo = true;
+        lss('pos_history', JSON.stringify(allHistory));
+        renderHist();
+      }
+      toast('Correo no enviado — usá el botón de reenvío en el historial', 'w');
+    }
+  } catch (e) {
+    toast('Error de red al enviar correo: ' + e.message, 'w');
   }
 }
 /* ═══════════════════════════════════════════════════
