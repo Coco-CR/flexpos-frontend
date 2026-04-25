@@ -2135,7 +2135,7 @@ async function saveDocToSupabase(doc) {
     };
     await sbFetch(`${SB_HIST()}`, {
       method:  'POST',
-      headers: { 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      headers: { ...sbH(), 'Prefer': 'resolution=merge-duplicates,return=representation' },
       body:    JSON.stringify(row),
     });
   } catch (e) {
