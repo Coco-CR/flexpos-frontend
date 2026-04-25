@@ -2637,9 +2637,6 @@ async function procesarPago(){
   allHistory.unshift(doc);lss('pos_history',JSON.stringify(allHistory));
 saveDocToSupabase(doc);
   // ── Enviar a Hacienda automáticamente si hay backend configurado ──
-   allHistory.unshift(doc);
-   lss('pos_history', JSON.stringify(allHistory));
-   saveDocToSupabase(doc);   // ← agregar esta línea
   if(BACKEND_URL&&BACKEND_KEY){
     // Mostrar estado: firmando…
     const idx=0; // recién insertado al inicio
@@ -2659,8 +2656,10 @@ saveDocToSupabase(doc);
       console.warn('[Hacienda] Error enviando:',e.message);
     });
   }
-  clearCart();
+clearCart();
   showTicket(doc);closeM('m-cobrar');updateDash();
+  // Volver a TE por defecto despues de FE o NC
+  if(docType==='FE'||docType==='NC')setDoc('TE');
 }
 
 /* ═══════════════════════════════════════════════════
