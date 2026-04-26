@@ -3193,17 +3193,21 @@ function abrirModalProd(id){
   provSel.innerHTML='<option value="">— Sin proveedor —</option>'+
     allProveedores.map(v=>`<option value="${v.id}">${esc(v.nombre)}</option>`).join('');
   provSel.value=p?.proveedor_id||'';
-// Reset
+
+   // Reset de los tres campos
 _pm_costo = 0; _pm_util = 0; _pm_venta = 0;
-document.getElementById('pm-costo').value = '';
-document.getElementById('pm-venta').value = '';
+document.getElementById('pm-costo').value      = '';
+document.getElementById('pm-util-input').value = '';  // NUEVO
+document.getElementById('pm-venta').value      = '';
 document.getElementById('pm-summary').style.display = 'none';
 
-if(p && (p.precio_costo > 0 || p.precio_venta > 0)){
-  document.getElementById('pm-costo').value = p.precio_costo || '';
-  document.getElementById('pm-venta').value = p.precio_venta || '';
-  pmRecalc();
-}  openM('m-prod');
+if (p && (p.precio_costo > 0 || p.precio_venta > 0)) {
+  document.getElementById('pm-costo').value      = p.precio_costo || '';
+  document.getElementById('pm-util-input').value = p.utilidad ? Number(p.utilidad).toFixed(2) : '';  // NUEVO
+  document.getElementById('pm-venta').value      = p.precio_venta || '';
+  pmRecalc('venta'); // recalcula desde venta para que todo quede sincronizado
+}  
+  openM('m-prod');
   setTimeout(()=>document.getElementById('pm-nombre').focus(),80);
 }
    oninput="pmRecalc('util')"   <!-- en pm-util-input -->
