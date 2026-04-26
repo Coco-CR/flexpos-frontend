@@ -3206,6 +3206,9 @@ if(p && (p.precio_costo > 0 || p.precio_venta > 0)){
 }  openM('m-prod');
   setTimeout(()=>document.getElementById('pm-nombre').focus(),80);
 }
+   oninput="pmRecalc('util')"   <!-- en pm-util-input -->
+   oninput="pmRecalc('venta')"  <!-- en pm-venta -->
+   oninput="pmRecalc('costo')"  <!-- en pm-costo -->
 
 function pmRecalc(){
   const costo = Number(document.getElementById('pm-costo').value || 0);
