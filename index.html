@@ -1638,8 +1638,8 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
 <div class="field" style="position:relative">
       <label>Código CABYS * (13 dígitos)</label>
       <input type="text" id="pm-cabys" placeholder="2110100000000" maxlength="13"
-             oninput="this.value=this.value.replace(/\D/g,'');pmCabysManual()"
-             autocomplete="off">
+       oninput="this.value=this.value.replace(/\D/g,'');onCabysInput(this.value)"
+       autocomplete="off">
       <div id="pm-cabys-sugs" style="
         display:none;position:absolute;z-index:999;left:0;right:0;top:100%;
         background:var(--bg2);border:1px solid var(--border);border-radius:8px;
@@ -1651,7 +1651,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <div class="frow2">
     <div class="field">
       <label>Tarifa IVA *</label>
-      <select id="pm-iva" onchange="pmRecalc()">
+      <select id="pm-iva" onchange="pmRecalc('util')">
         <option value="13">13% — Tarifa general</option>
         <option value="4">4% — Salud (medicamentos, equipos médicos)</option>
         <option value="2">2% — Canasta básica ampliada</option>
@@ -1669,16 +1669,22 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   </div>
   <div class="sdiv">Precios</div>
   <div class="pricebox">
-    <div class="frow2">
-      <div class="field">
-        <label>Precio de Costo ₡ *</label>
-        <input type="number" id="pm-costo" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      <div class="frow2">
+        <div class="field">
+          <label>Precio de Costo ₡ *</label>
+          <input type="number" id="pm-costo" placeholder="0" min="0" step="1" oninput="pmRecalc('costo')">
+        </div>
+        <div class="field">
+          <label>Utilidad %</label>
+          <input type="number" id="pm-util-input" placeholder="0" step="0.01" oninput="pmRecalc('util')">
+        </div>
       </div>
-      <div class="field">
-        <label>Precio de Venta ₡ * <span style="font-weight:400;font-size:11px;color:var(--text3)">(IVA incluido)</span></label>
-        <input type="number" id="pm-venta" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      <div class="frow2">
+        <div class="field">
+          <label>Precio de Venta ₡ * <span style="font-weight:400;font-size:11px;color:var(--text3)">(IVA incluido)</span></label>
+          <input type="number" id="pm-venta" placeholder="0" min="0" step="1" oninput="pmRecalc('venta')">
+        </div>
       </div>
-    </div>
     <div class="summary-box" id="pm-summary" style="display:none;">
       <div class="sb-grid">
         <div class="sb-item"><label>Precio Costo</label><div class="sbv c" id="pm-sb-costo">₡0</div></div>
@@ -3187,47 +3193,80 @@ function abrirModalProd(id){
   provSel.innerHTML='<option value="">— Sin proveedor —</option>'+
     allProveedores.map(v=>`<option value="${v.id}">${esc(v.nombre)}</option>`).join('');
   provSel.value=p?.proveedor_id||'';
-// Reset
+
+   // Reset de los tres campos
 _pm_costo = 0; _pm_util = 0; _pm_venta = 0;
-document.getElementById('pm-costo').value = '';
-document.getElementById('pm-venta').value = '';
+document.getElementById('pm-costo').value      = '';
+document.getElementById('pm-util-input').value = '';  // NUEVO
+document.getElementById('pm-venta').value      = '';
 document.getElementById('pm-summary').style.display = 'none';
 
-if(p && (p.precio_costo > 0 || p.precio_venta > 0)){
-  document.getElementById('pm-costo').value = p.precio_costo || '';
-  document.getElementById('pm-venta').value = p.precio_venta || '';
-  pmRecalc();
-}  openM('m-prod');
+if (p && (p.precio_costo > 0 || p.precio_venta > 0)) {
+  document.getElementById('pm-costo').value      = p.precio_costo || '';
+  document.getElementById('pm-util-input').value = p.utilidad ? Number(p.utilidad).toFixed(2) : '';  // NUEVO
+  document.getElementById('pm-venta').value      = p.precio_venta || '';
+  pmRecalc('venta'); // recalcula desde venta para que todo quede sincronizado
+}  
+  openM('m-prod');
   setTimeout(()=>document.getElementById('pm-nombre').focus(),80);
 }
+   oninput="pmRecalc('util')"   <!-- en pm-util-input -->
+   oninput="pmRecalc('venta')"  <!-- en pm-venta -->
+   oninput="pmRecalc('costo')"  <!-- en pm-costo -->
 
-function pmRecalc(){
-  const costo = Number(document.getElementById('pm-costo').value || 0);
-  const venta = Number(document.getElementById('pm-venta').value || 0);
+// El parámetro 'origen' indica cuál campo disparó el recálculo
+function pmRecalc(origen) {
+  const costo  = Number(document.getElementById('pm-costo').value || 0);
+  const util   = Number(document.getElementById('pm-util-input').value || 0); // % bruto sobre costo
+  const venta  = Number(document.getElementById('pm-venta').value || 0);
   const tarifaStr = document.getElementById('pm-iva').value || '13';
   const tarifa = parseFloat(tarifaStr) || 0;
 
-  _pm_costo = costo;
-  _pm_venta = venta;
+  let costoFinal = costo, utilFinal = util, ventaFinal = venta;
 
-  if(costo > 0 && venta > 0){
-    const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
-    const ivaMonto = venta - base;
-    const util = costo > 0 ? ((venta - costo) / costo) * 100 : 0;
-    _pm_util = util;
+  if (origen === 'venta' && costo > 0 && venta > 0) {
+    // Costo + Venta → Utilidad
+   const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
+   utilFinal = ((base - costo) / costo) * 100;
+   document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
+  } else if (origen === 'util' && costo > 0 && util !== 0) {
+    // Costo + Utilidad → Venta
+    ventaFinal = costo * (1 + util / 100) * (1 + tarifa / 100);
+    document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
+  } else if (origen === 'costo') {
+    // Si ya había utilidad ingresada, recalcula venta; si había venta, recalcula utilidad
+    if (util !== 0 && costo > 0) {
+      ventaFinal = costo * (1 + util / 100) * (1 + tarifa / 100);
+      document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
+    } else if (venta > 0 && costo > 0) {
+      const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
+      utilFinal = ((base - costo) / costo) * 100;
+      document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
+    }
+  }
 
-    document.getElementById('pm-sb-costo').textContent = '₡' + fmt(costo);
+  // Guardar en variables globales
+  _pm_costo = costoFinal;
+  _pm_util  = utilFinal;
+  _pm_venta = ventaFinal;
+
+  // Mostrar summary si hay datos suficientes
+  if (costoFinal > 0 && ventaFinal > 0) {
+    const base     = tarifa > 0 ? ventaFinal / (1 + tarifa / 100) : ventaFinal;
+    const ivaMonto = ventaFinal - base;
+
+    document.getElementById('pm-sb-costo').textContent = '₡' + fmt(costoFinal);
     document.getElementById('pm-sb-base').textContent  = '₡' + fmt(Math.round(base));
     document.getElementById('pm-sb-iva').textContent   = '₡' + fmt(Math.round(ivaMonto));
-    document.getElementById('pm-sb-util').textContent  = (util >= 0 ? '+' : '') + util.toFixed(1) + '%';
-    document.getElementById('pm-sb-venta').textContent = '₡' + fmt(venta);
+    document.getElementById('pm-sb-util').textContent  = (utilFinal >= 0 ? '+' : '') + utilFinal.toFixed(1) + '%';
+    document.getElementById('pm-sb-venta').textContent = '₡' + fmt(ventaFinal);
     document.getElementById('pm-summary').style.display = 'block';
   } else {
     document.getElementById('pm-summary').style.display = 'none';
-    _pm_util = 0;
   }
 }
-async function saveProd(){
+   
+ async function saveProd(){
   const id=document.getElementById('prod-id').value;
   const nombre=document.getElementById('pm-nombre').value.trim();
   const stock=document.getElementById('pm-stock').value;
@@ -3237,10 +3276,13 @@ async function saveProd(){
   const provId=document.getElementById('pm-proveedor').value||null;
   const codigo_barras=document.getElementById('pm-barcode').value.trim()||null;
 
-  // ── NUEVO: leer precios de los inputs simplificados ──
+ 
   _pm_costo = Number(document.getElementById('pm-costo').value || 0);
   _pm_venta = Number(document.getElementById('pm-venta').value || 0);
-  if(_pm_costo > 0 && _pm_venta > 0) pmRecalc(); // actualiza _pm_util
+  // NUEVO: leer también la utilidad del input
+  const utilInput = Number(document.getElementById('pm-util-input').value || 0);
+  if (utilInput !== 0) _pm_util = utilInput;
+  if (_pm_costo > 0 && _pm_venta > 0) pmRecalc('venta');
 
   if(!nombre)          return toast('El nombre es obligatorio','e');
   if(stock==='')       return toast('Ingresa el stock','e');
@@ -4856,16 +4898,28 @@ function pmNombreInput(){
 }
 
 // Llamado cuando el usuario escribe en pm-cabys manualmente
-function pmCabysManual(){
-  const v = document.getElementById('pm-cabys').value;
-  if(v.length === 13){
-    pmCabysOcultarSugs();
-    document.getElementById('pm-cabys-status').textContent = '✓ CABYS ingresado manualmente';
-  } else {
-    document.getElementById('pm-cabys-status').textContent = '';
+async function onCabysInput(val) {
+  if (val.length !== 13) return;
+
+  try {
+    const r = await sbFetch(
+      `${SB_URL}/rest/v1/cabys_catalogo?codigo=eq.${val}&select=impuesto,descripcion`,
+      {}
+    );
+    const item = r?.[0];
+
+    if (!item) return toast('CABYS no encontrado en catálogo', 'w');
+
+    const tarifa = String(Math.round((item.impuesto || 0) * 100));
+    document.getElementById('pm-iva').value = tarifa;
+
+    toast(`CABYS: ${item.descripcion} — IVA ${tarifa}%`, 's');
+    pmRecalc('util');
+
+  } catch(e) {
+    toast('Error consultando CABYS', 'e');
   }
 }
-
 async function pmCabysBuscar(q){
   const norm = q.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
@@ -4944,10 +4998,28 @@ async function pmCabysBuscar(q){
   box.style.display = 'block';
 }
 
-function pmCabysElegir(codigo){
+async function pmCabysElegir(codigo){
   document.getElementById('pm-cabys').value = codigo;
-  document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
   pmCabysOcultarSugs();
+
+  try {
+    const r = await sbFetch(
+      `${SB_URL}/rest/v1/cabys_catalogo?codigo=eq.${codigo}&select=impuesto,descripcion`,
+      {}
+    );
+    if(r && r.length){
+      const item = r[0];
+      const tarifa = String(Math.round((item.impuesto || 0) * 100));
+      document.getElementById('pm-iva').value = tarifa;
+      document.getElementById('pm-cabys-status').textContent = `✓ CABYS seleccionado · IVA ${tarifa}%`;
+      pmRecalc('util');
+    } else {
+      document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
+    }
+  } catch(e){
+    console.warn('No se pudo cargar IVA del CABYS:', e);
+    document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
+  }
 }
 
 function pmCabysOcultarSugs(){
