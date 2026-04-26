@@ -3274,10 +3274,13 @@ function pmRecalc(origen) {
   const provId=document.getElementById('pm-proveedor').value||null;
   const codigo_barras=document.getElementById('pm-barcode').value.trim()||null;
 
-  // ── NUEVO: leer precios de los inputs simplificados ──
+ 
   _pm_costo = Number(document.getElementById('pm-costo').value || 0);
   _pm_venta = Number(document.getElementById('pm-venta').value || 0);
-  if(_pm_costo > 0 && _pm_venta > 0) pmRecalc(); // actualiza _pm_util
+  // NUEVO: leer también la utilidad del input
+  const utilInput = Number(document.getElementById('pm-util-input').value || 0);
+  if (utilInput !== 0) _pm_util = utilInput;
+  if (_pm_costo > 0 && _pm_venta > 0) pmRecalc('venta');
 
   if(!nombre)          return toast('El nombre es obligatorio','e');
   if(stock==='')       return toast('Ingresa el stock','e');
