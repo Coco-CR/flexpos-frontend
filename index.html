@@ -1669,16 +1669,22 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   </div>
   <div class="sdiv">Precios</div>
   <div class="pricebox">
-    <div class="frow2">
-      <div class="field">
-        <label>Precio de Costo ₡ *</label>
-        <input type="number" id="pm-costo" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      <div class="frow2">
+        <div class="field">
+          <label>Precio de Costo ₡ *</label>
+          <input type="number" id="pm-costo" placeholder="0" min="0" step="1" oninput="pmRecalc('costo')">
+        </div>
+        <div class="field">
+          <label>Utilidad %</label>
+          <input type="number" id="pm-util-input" placeholder="0" step="0.01" oninput="pmRecalc('util')">
+        </div>
       </div>
-      <div class="field">
-        <label>Precio de Venta ₡ * <span style="font-weight:400;font-size:11px;color:var(--text3)">(IVA incluido)</span></label>
-        <input type="number" id="pm-venta" placeholder="0" min="0" step="1" oninput="pmRecalc()">
+      <div class="frow2">
+        <div class="field">
+          <label>Precio de Venta ₡ * <span style="font-weight:400;font-size:11px;color:var(--text3)">(IVA incluido)</span></label>
+          <input type="number" id="pm-venta" placeholder="0" min="0" step="1" oninput="pmRecalc('venta')">
+        </div>
       </div>
-    </div>
     <div class="summary-box" id="pm-summary" style="display:none;">
       <div class="sb-grid">
         <div class="sb-item"><label>Precio Costo</label><div class="sbv c" id="pm-sb-costo">₡0</div></div>
