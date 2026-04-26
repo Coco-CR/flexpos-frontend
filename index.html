@@ -4902,18 +4902,19 @@ async function onCabysInput(val) {
   if (val.length !== 13) return;
 
   try {
-    const res  = await fetch(`https://api.hacienda.go.cr/fe/cabys?q=${val}`);
-    const data = await res.json();
-    const item = data?.cabys?.[0];
+    const r = await sbFetch(
+      `${SB_URL}/rest/v1/cabys_catalogo?codigo=eq.${val}&select=impuesto,descripcion`,
+      {}
+    );
+    const item = r?.[0];
 
-    if (!item) return toast('CABYS no encontrado', 'w');
+    if (!item) return toast('CABYS no encontrado en catálogo', 'w');
 
-    const tarifa = String(item.impuesto ?? 13);
+    const tarifa = String(Math.round((item.impuesto || 0) * 100));
     document.getElementById('pm-iva').value = tarifa;
 
     toast(`CABYS: ${item.descripcion} — IVA ${tarifa}%`, 's');
-
-    pmRecalc('venta');
+    pmRecalc('util');
 
   } catch(e) {
     toast('Error consultando CABYS', 'e');
@@ -4997,10 +4998,28 @@ async function pmCabysBuscar(q){
   box.style.display = 'block';
 }
 
-function pmCabysElegir(codigo){
+async function pmCabysElegir(codigo){
   document.getElementById('pm-cabys').value = codigo;
-  document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
   pmCabysOcultarSugs();
+
+  try {
+    const r = await sbFetch(
+      `${SB_URL}/rest/v1/cabys_catalogo?codigo=eq.${codigo}&select=impuesto,descripcion`,
+      {}
+    );
+    if(r && r.length){
+      const item = r[0];
+      const tarifa = String(Math.round((item.impuesto || 0) * 100));
+      document.getElementById('pm-iva').value = tarifa;
+      document.getElementById('pm-cabys-status').textContent = `✓ CABYS seleccionado · IVA ${tarifa}%`;
+      pmRecalc('util');
+    } else {
+      document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
+    }
+  } catch(e){
+    console.warn('No se pudo cargar IVA del CABYS:', e);
+    document.getElementById('pm-cabys-status').textContent = '✓ CABYS seleccionado';
+  }
 }
 
 function pmCabysOcultarSugs(){
