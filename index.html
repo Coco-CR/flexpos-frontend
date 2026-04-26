@@ -1638,8 +1638,8 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
 <div class="field" style="position:relative">
       <label>Código CABYS * (13 dígitos)</label>
       <input type="text" id="pm-cabys" placeholder="2110100000000" maxlength="13"
-             oninput="this.value=this.value.replace(/\D/g,'');pmCabysManual()"
-             autocomplete="off">
+       oninput="this.value=this.value.replace(/\D/g,'');onCabysInput(this.value)"
+       autocomplete="off">
       <div id="pm-cabys-sugs" style="
         display:none;position:absolute;z-index:999;left:0;right:0;top:100%;
         background:var(--bg2);border:1px solid var(--border);border-radius:8px;
@@ -3236,10 +3236,11 @@ function pmRecalc(origen) {
   } else if (origen === 'costo') {
     // Si ya había utilidad ingresada, recalcula venta; si había venta, recalcula utilidad
     if (util !== 0 && costo > 0) {
-      ventaFinal = costo * (1 + util / 100);
+      ventaFinal = costo * (1 + util / 100) * (1 + tarifa / 100);
       document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
     } else if (venta > 0 && costo > 0) {
-      utilFinal = ((venta - costo) / costo) * 100;
+      const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
+      utilFinal = ((base - costo) / costo) * 100;
       document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
     }
   }
@@ -4897,16 +4898,27 @@ function pmNombreInput(){
 }
 
 // Llamado cuando el usuario escribe en pm-cabys manualmente
-function pmCabysManual(){
-  const v = document.getElementById('pm-cabys').value;
-  if(v.length === 13){
-    pmCabysOcultarSugs();
-    document.getElementById('pm-cabys-status').textContent = '✓ CABYS ingresado manualmente';
-  } else {
-    document.getElementById('pm-cabys-status').textContent = '';
+async function onCabysInput(val) {
+  if (val.length !== 13) return;
+
+  try {
+    const res  = await fetch(`https://api.hacienda.go.cr/fe/cabys?q=${val}`);
+    const data = await res.json();
+    const item = data?.cabys?.[0];
+
+    if (!item) return toast('CABYS no encontrado', 'w');
+
+    const tarifa = String(item.impuesto ?? 13);
+    document.getElementById('pm-iva').value = tarifa;
+
+    toast(`CABYS: ${item.descripcion} — IVA ${tarifa}%`, 's');
+
+    pmRecalc('venta');
+
+  } catch(e) {
+    toast('Error consultando CABYS', 'e');
   }
 }
-
 async function pmCabysBuscar(q){
   const norm = q.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
