@@ -3210,33 +3210,57 @@ if(p && (p.precio_costo > 0 || p.precio_venta > 0)){
    oninput="pmRecalc('venta')"  <!-- en pm-venta -->
    oninput="pmRecalc('costo')"  <!-- en pm-costo -->
 
-function pmRecalc(){
-  const costo = Number(document.getElementById('pm-costo').value || 0);
-  const venta = Number(document.getElementById('pm-venta').value || 0);
+// El parámetro 'origen' indica cuál campo disparó el recálculo
+function pmRecalc(origen) {
+  const costo  = Number(document.getElementById('pm-costo').value || 0);
+  const util   = Number(document.getElementById('pm-util-input').value || 0); // % bruto sobre costo
+  const venta  = Number(document.getElementById('pm-venta').value || 0);
   const tarifaStr = document.getElementById('pm-iva').value || '13';
   const tarifa = parseFloat(tarifaStr) || 0;
 
-  _pm_costo = costo;
-  _pm_venta = venta;
+  let costoFinal = costo, utilFinal = util, ventaFinal = venta;
 
-  if(costo > 0 && venta > 0){
-    const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
-    const ivaMonto = venta - base;
-    const util = costo > 0 ? ((venta - costo) / costo) * 100 : 0;
-    _pm_util = util;
+  if (origen === 'venta' && costo > 0 && venta > 0) {
+    // Costo + Venta → Utilidad
+    utilFinal = ((venta - costo) / costo) * 100;
+    document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
+  } else if (origen === 'util' && costo > 0 && util !== 0) {
+    // Costo + Utilidad → Venta
+    ventaFinal = costo * (1 + util / 100);
+    document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
+  } else if (origen === 'costo') {
+    // Si ya había utilidad ingresada, recalcula venta; si había venta, recalcula utilidad
+    if (util !== 0 && costo > 0) {
+      ventaFinal = costo * (1 + util / 100);
+      document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
+    } else if (venta > 0 && costo > 0) {
+      utilFinal = ((venta - costo) / costo) * 100;
+      document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
+    }
+  }
 
-    document.getElementById('pm-sb-costo').textContent = '₡' + fmt(costo);
+  // Guardar en variables globales
+  _pm_costo = costoFinal;
+  _pm_util  = utilFinal;
+  _pm_venta = ventaFinal;
+
+  // Mostrar summary si hay datos suficientes
+  if (costoFinal > 0 && ventaFinal > 0) {
+    const base     = tarifa > 0 ? ventaFinal / (1 + tarifa / 100) : ventaFinal;
+    const ivaMonto = ventaFinal - base;
+
+    document.getElementById('pm-sb-costo').textContent = '₡' + fmt(costoFinal);
     document.getElementById('pm-sb-base').textContent  = '₡' + fmt(Math.round(base));
     document.getElementById('pm-sb-iva').textContent   = '₡' + fmt(Math.round(ivaMonto));
-    document.getElementById('pm-sb-util').textContent  = (util >= 0 ? '+' : '') + util.toFixed(1) + '%';
-    document.getElementById('pm-sb-venta').textContent = '₡' + fmt(venta);
+    document.getElementById('pm-sb-util').textContent  = (utilFinal >= 0 ? '+' : '') + utilFinal.toFixed(1) + '%';
+    document.getElementById('pm-sb-venta').textContent = '₡' + fmt(ventaFinal);
     document.getElementById('pm-summary').style.display = 'block';
   } else {
     document.getElementById('pm-summary').style.display = 'none';
-    _pm_util = 0;
   }
 }
-async function saveProd(){
+   
+ async function saveProd(){
   const id=document.getElementById('prod-id').value;
   const nombre=document.getElementById('pm-nombre').value.trim();
   const stock=document.getElementById('pm-stock').value;
