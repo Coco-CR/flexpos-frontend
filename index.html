@@ -1651,7 +1651,7 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
   <div class="frow2">
     <div class="field">
       <label>Tarifa IVA *</label>
-      <select id="pm-iva" onchange="pmRecalc()">
+      <select id="pm-iva" onchange="pmRecalc('util')">
         <option value="13">13% — Tarifa general</option>
         <option value="4">4% — Salud (medicamentos, equipos médicos)</option>
         <option value="2">2% — Canasta básica ampliada</option>
@@ -3226,11 +3226,12 @@ function pmRecalc(origen) {
 
   if (origen === 'venta' && costo > 0 && venta > 0) {
     // Costo + Venta → Utilidad
-    utilFinal = ((venta - costo) / costo) * 100;
-    document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
+   const base = tarifa > 0 ? venta / (1 + tarifa / 100) : venta;
+   utilFinal = ((base - costo) / costo) * 100;
+   document.getElementById('pm-util-input').value = utilFinal.toFixed(2);
   } else if (origen === 'util' && costo > 0 && util !== 0) {
     // Costo + Utilidad → Venta
-    ventaFinal = costo * (1 + util / 100);
+    ventaFinal = costo * (1 + util / 100) * (1 + tarifa / 100);
     document.getElementById('pm-venta').value = ventaFinal.toFixed(2);
   } else if (origen === 'costo') {
     // Si ya había utilidad ingresada, recalcula venta; si había venta, recalcula utilidad
