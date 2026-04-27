@@ -1906,7 +1906,7 @@ function saveActividades(){
   sucursal: ls('term_sucursal') || '001',
   terminal: ls('term_terminal') || '00002',
 };
-let BACKEND_URL = ls('backend_url')||'', BACKEND_KEY = ls('backend_key')||'';
+let BACKEND_URL = ls('backend_url')||'https://flexpos-backend-production.up.railway.app', BACKEND_KEY = ls('backend_key')||'';
 let TC    = Number(ls('tipo_cambio'))||650;
 let CONSEC= JSON.parse(ls('pos_consec')||'{"FE":0,"TE":0,"NC":0}');
 let allProds=[], allClients=[], allProveedores=[], allHistory=JSON.parse(ls('pos_history')||'[]');
