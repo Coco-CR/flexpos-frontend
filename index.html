@@ -1569,7 +1569,6 @@ td.td-prov{font-size:11px;color:var(--purple);max-width:130px;overflow:hidden;te
     <button class="btn btn-s" onclick="closeM('m-hdoc')">Cerrar</button>
     <button class="btn btn-o" onclick="dlHistXML()">⬇ XML</button>
     <button class="btn btn-p" onclick="dlHistPDF()">⬇ PDF</button>
-    <button class="btn btn-o" onclick="makeNC()" id="hd-nc-btn">↩ Nota de Crédito</button>
   </div>
 </div></div>
    <!-- CORREGIR VENTA -->
@@ -1985,13 +1984,41 @@ function selRole(r){
   document.getElementById('rc-admin').classList.toggle('on',r==='admin');
   document.getElementById('rc-cajero').classList.toggle('on',r==='cajero');
 }
-function doLogin(){
-  const u=document.getElementById('l-user').value.trim();
-  const p=document.getElementById('l-pass').value;
-  const found=getUsers().find(x=>x.username===u&&x.password===p);
-  if(!found){document.getElementById('login-err').classList.add('on');return;}
-  document.getElementById('login-err').classList.remove('on');
-  startSession(found);
+async function doLogin(){
+  const u = document.getElementById('l-user').value.trim();
+  const p = document.getElementById('l-pass').value;
+  const errEl = document.getElementById('login-err');
+
+  if(!u || !p){
+    errEl.classList.add('on');
+    return;
+  }
+
+  try {
+    const r = await fetch(`${BACKEND_URL}/api/login`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        username: u,
+        password: p,
+        tenant_id: TENANT_ID
+      })
+    });
+
+    const data = await r.json();
+
+    if(!r.ok || !data.ok){
+      errEl.classList.add('on');
+      return;
+    }
+
+    errEl.classList.remove('on');
+    startSession(data.user);
+
+  } catch(e){
+    errEl.classList.add('on');
+    toast('Error de conexión: ' + e.message, 'e');
+  }
 }
 function doRegister(){
   const nombre=document.getElementById('r-nombre').value.trim();
@@ -2901,25 +2928,7 @@ function viewHistDoc(id){
   viewDoc=d;
   document.getElementById('hd-title').textContent={FE:'🧾 Factura',TE:'🏷 Tiquete',NC:'↩ Nota de Crédito'}[d.tipo]||'Doc';
   document.getElementById('hd-content').textContent=buildTicketText(d);
-  document.getElementById('hd-nc-btn').style.display=d.tipo==='NC'?'none':'inline-flex';
   openM('m-hdoc');
-}
-function makeNC(){closeM('m-hdoc');if(viewDoc)histNC(viewDoc.id);}
-function histNC(id){
-  const d=allHistory.find(x=>x.id===id);if(!d)return;
-  clearCart();d.items.forEach(i=>cart.push({...i}));
-  curClient=d.cliente?.tipoId!=='final'?d.cliente:null;
-  document.getElementById('cart-cli-name').value=curClient?.nombre||'';
-  document.getElementById('nc-ref').value=d.numero;
-  // Guardar la clave de 50 dígitos y el tipo del documento original (necesarios para
-  // <InformacionReferencia> al firmar la NC en Hacienda)
-  window._ncRefData={
-    claveOriginal: d.clave,
-    tipoOriginal:  d.tipo,    // 'TE' o 'FE'
-    fechaOriginal: d.fecha,
-    numeroOriginal:d.numero,
-  };
-  setDoc('NC');go('pos');renderCart();toast('Nota de Crédito lista para confirmar','w');
 }
 // Estado temporal del flujo en curso (qué doc se está corrigiendo/anulando)
 let _docEnOperacion=null;
