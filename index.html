@@ -4153,7 +4153,10 @@ async function consultarHacienda(docId, opts = {}) {
     const idx = allHistory.findIndex(x => x.id === docId);
     if (idx >= 0) {
       allHistory[idx].haciendaEstado = data.ind_estado || 'recibido';
-      allHistory[idx].haciendaDetalle = data.respuesta_xml_decodificada || 'Respuesta procesada';
+      const msg = data.mensajeHacienda;
+      allHistory[idx].haciendaDetalle = msg
+        ? `[${msg.codigo}] ${msg.estado} — ${msg.detalle}`
+        : (data.respuesta_xml_decodificada || 'Respuesta procesada');
       lss('pos_history', JSON.stringify(allHistory));
       renderHist();
       if (!silent) toast('Estado actualizado', 's');
